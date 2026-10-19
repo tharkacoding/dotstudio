@@ -1,0 +1,724 @@
+/* DotStudio — local-first mascot designer. All artwork is generated from original inline SVG. */
+(() => {
+  'use strict';
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const uid = () => (globalThis.crypto?.randomUUID ? crypto.randomUUID() : `dot-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  const clone = (obj) => JSON.parse(JSON.stringify(obj));
+  const STORAGE_KEY = 'dotstudio.library.v1';
+  const PREF_KEY = 'dotstudio.prefs.v1';
+
+  const SHAPES = [
+    ['orb','Orb','Blobs'],['squish','Squished orb','Blobs'],['tall','Tall orb','Blobs'],['bean','Bean','Blobs'],['jellybean','Jellybean','Blobs'],['pebble','Pebble','Blobs'],['puddle','Puddle','Blobs'],['splat','Soft splat','Blobs'],['teardrop','Teardrop','Blobs'],['pear','Pear drop','Blobs'],['capsule','Capsule','Blobs'],['pillow','Pillow','Blobs'],['cloud','Cloud puff','Blobs'],['crescent','Crescent','Blobs'],
+    ['triangle','Soft triangle','Cosmic'],['diamond','Rounded diamond','Cosmic'],['heart','Heart blob','Cosmic'],['star','Star puff','Cosmic'],['flower','Flower puff','Cosmic'],['sun','Sun puff','Cosmic'],['moon','Moon puff','Cosmic'],['snowball','Snowball','Cosmic'],
+    ['leaf','Leaf bud','Nature'],['mushroom','Mushroom','Nature'],['berry','Berry','Nature'],['mochi','Mochi bun','Nature'],['cupcake','Cupcake','Nature'],['sprout','Little sprout','Nature'],
+    ['frog','Frog puff','Creatures'],['bunny','Bunny','Creatures'],['cat','Cat','Creatures'],['fox','Fox puff','Creatures'],['chick','Chick','Creatures'],['whale','Whale blob','Creatures'],['turtle','Turtle puff','Creatures'],['dragon','Dragon puff','Creatures'],['ghost','Ghost puff','Creatures'],['octopus','Octopus blob','Creatures']
+  ].map(([id,label,category]) => ({id,label,category}));
+
+  const PATHS = {
+    orb:'M50 20 C73 20 91 38 91 63 C91 87 73 106 50 106 C27 106 9 87 9 63 C9 39 27 20 50 20Z',
+    squish:'M50 31 C73 31 94 43 94 63 C94 83 73 95 50 95 C27 95 6 83 6 63 C6 43 27 31 50 31Z',
+    tall:'M50 13 C70 13 84 31 84 62 C84 88 70 108 50 108 C30 108 16 88 16 62 C16 31 30 13 50 13Z',
+    bean:'M54 22 C75 20 90 36 89 59 C88 79 78 101 58 106 C38 111 17 96 14 76 C10 56 25 38 38 29 C43 26 48 23 54 22Z',
+    jellybean:'M50 23 C69 23 85 37 87 57 C89 78 75 100 55 103 C34 106 16 92 13 72 C10 51 25 30 44 24 C46 23 48 23 50 23Z',
+    pebble:'M51 21 C70 20 89 35 91 54 C93 73 81 94 63 103 C47 110 24 101 14 84 C4 67 13 43 29 30 C36 24 43 22 51 21Z',
+    puddle:'M50 31 C63 29 72 35 81 33 C91 32 95 42 91 52 C88 61 94 69 89 80 C84 91 72 90 66 99 C58 109 43 106 35 99 C27 92 17 97 12 86 C7 75 16 67 11 57 C6 45 16 37 28 38 C37 39 41 33 50 31Z',
+    splat:'M50 23 C58 33 64 30 71 25 C78 20 83 29 80 38 C91 36 95 46 86 53 C99 59 96 69 84 73 C90 84 81 91 72 84 C72 98 60 103 53 91 C46 104 34 100 35 88 C23 97 14 90 21 78 C7 77 6 65 20 60 C8 51 15 41 28 44 C24 30 37 25 43 39 C44 30 45 25 50 23Z',
+    teardrop:'M50 17 C59 31 86 50 86 73 C86 93 70 107 50 107 C30 107 14 93 14 73 C14 50 41 31 50 17Z',
+    pear:'M50 18 C64 18 69 32 72 43 C85 52 91 66 87 82 C83 98 68 107 50 107 C31 107 16 98 12 82 C8 66 15 52 28 43 C31 32 36 18 50 18Z',
+    capsule:'M50 17 C71 17 85 34 85 63 C85 91 71 108 50 108 C29 108 15 91 15 63 C15 34 29 17 50 17Z',
+    pillow:'M31 23 C40 18 60 18 69 23 C82 23 89 31 89 44 C95 54 95 72 89 82 C89 96 81 104 68 104 C58 109 42 109 32 104 C19 104 11 96 11 82 C5 72 5 54 11 44 C11 31 18 23 31 23Z',
+    cloud:'M25 48 C27 34 39 27 51 31 C59 17 80 20 83 39 C95 42 96 58 89 67 C91 87 75 99 58 94 C47 106 28 99 28 87 C11 88 5 76 12 64 C8 54 15 47 25 48Z',
+    crescent:'M73 24 C60 33 52 45 52 61 C52 78 62 92 78 100 C70 105 61 108 50 107 C28 107 11 89 11 64 C11 39 29 20 52 20 C60 20 67 21 73 24Z',
+    triangle:'M50 20 C54 20 57 24 60 29 L89 86 C94 96 88 104 77 104 L23 104 C12 104 6 96 11 86 L40 29 C43 24 46 20 50 20Z',
+    diamond:'M50 18 C55 18 59 22 63 28 L88 55 C92 60 92 66 88 71 L62 100 C55 108 45 108 38 100 L12 71 C8 66 8 60 12 55 L37 28 C41 22 45 18 50 18Z',
+    heart:'M50 105 C44 100 17 79 12 60 C6 38 21 23 38 25 C45 25 49 30 50 35 C53 28 59 24 67 25 C84 25 95 40 89 59 C84 79 59 100 50 105Z',
+    star:'M50 17 L59 42 L85 39 L69 59 L83 81 L58 77 L49 103 L40 78 L15 83 L31 61 L15 42 L41 44Z',
+    flower:'M50 30 C58 18 70 21 72 34 C86 30 94 41 85 52 C98 61 92 74 78 73 C80 88 67 95 57 83 C47 96 34 90 36 76 C21 79 14 67 26 57 C16 45 25 33 39 38 C40 26 47 23 50 30Z',
+    sun:'M50 23 C73 23 90 40 90 64 C90 87 73 104 50 104 C27 104 10 87 10 64 C10 41 27 23 50 23Z',
+    moon:'M72 25 C60 35 53 47 53 63 C53 80 64 94 79 101 C71 105 61 108 51 108 C28 108 10 89 10 64 C10 40 28 21 51 21 C59 21 66 22 72 25Z',
+    snowball:'M50 21 C72 21 90 39 90 63 C90 88 72 106 50 106 C28 106 10 88 10 63 C10 39 28 21 50 21Z',
+    leaf:'M50 18 C77 25 91 44 83 68 C77 88 57 101 27 107 C16 80 17 56 30 38 C36 29 43 22 50 18Z',
+    mushroom:'M50 22 C71 22 89 35 90 51 C90 60 80 64 70 64 L66 100 C65 106 60 108 50 108 C40 108 35 106 34 100 L30 64 C20 64 10 60 10 51 C11 35 29 22 50 22Z',
+    berry:'M50 34 C59 29 66 34 72 39 C86 46 91 61 85 78 C79 96 65 106 50 108 C35 106 21 96 15 78 C9 61 14 46 28 39 C35 34 41 29 50 34Z',
+    mochi:'M50 30 C69 27 87 39 89 58 C92 78 76 99 55 102 C34 105 14 91 12 71 C10 51 26 34 45 30 C47 30 48 30 50 30Z',
+    cupcake:'M50 21 C67 21 77 34 78 48 C89 49 91 57 83 64 L76 101 C74 107 66 108 50 108 C34 108 26 107 24 101 L17 64 C9 57 11 49 22 48 C23 34 33 21 50 21Z',
+    sprout:'M50 35 C72 35 88 50 88 72 C88 93 72 107 50 107 C28 107 12 93 12 72 C12 50 28 35 50 35Z',
+    frog:'M50 31 C69 31 87 44 90 63 C92 84 75 104 50 105 C25 104 8 84 10 63 C13 44 31 31 50 31Z',
+    bunny:'M50 31 C73 31 90 47 90 68 C90 90 73 106 50 106 C27 106 10 90 10 68 C10 47 27 31 50 31Z',
+    cat:'M50 25 L59 39 C76 33 90 46 90 66 C90 89 74 106 50 106 C26 106 10 89 10 66 C10 46 24 33 41 39Z',
+    fox:'M50 21 L62 40 C78 36 91 49 91 67 C91 90 75 106 50 106 C25 106 9 90 9 67 C9 49 22 36 38 40Z',
+    chick:'M50 24 C73 24 89 42 89 66 C89 89 73 106 50 106 C27 106 11 89 11 66 C11 42 27 24 50 24Z',
+    whale:'M50 31 C67 31 81 40 88 54 L96 49 C100 47 102 50 100 55 L92 68 C91 90 73 105 50 105 C27 105 10 88 10 68 C10 47 27 31 50 31Z',
+    turtle:'M50 31 C73 31 90 47 90 70 C90 91 74 105 50 105 C26 105 10 91 10 70 C10 47 27 31 50 31Z',
+    dragon:'M50 29 C72 29 89 45 89 67 C89 90 73 106 50 106 C27 106 11 90 11 67 C11 45 28 29 50 29Z',
+    ghost:'M50 21 C72 21 88 39 88 64 L88 96 C88 103 82 105 76 99 C70 93 65 104 58 104 C52 104 51 98 45 99 C38 101 34 107 27 102 C20 97 12 105 12 96 L12 64 C12 39 28 21 50 21Z',
+    octopus:'M50 25 C73 25 88 42 88 64 C88 77 83 86 76 91 C83 101 74 108 67 99 C61 108 53 109 49 98 C43 109 34 107 32 98 C22 106 14 99 23 89 C15 82 12 74 12 64 C12 42 27 25 50 25Z'
+  };
+
+  const PALETTES = [
+    {name:'Peach Sorbet',primary:'#F3A79B',secondary:'#FFD8C4',accent:'#F8C6B5'},
+    {name:'Mint',primary:'#84D9C0',secondary:'#C6F3D8',accent:'#A8EBD7'},
+    {name:'Lavender',primary:'#B49EF2',secondary:'#DFD3FF',accent:'#D0B9FF'},
+    {name:'Sky',primary:'#7EC5EA',secondary:'#C9EEFF',accent:'#A8DDF7'},
+    {name:'Coral',primary:'#F47B78',secondary:'#FFC6B4',accent:'#FFACA0'},
+    {name:'Lemon',primary:'#F2D169',secondary:'#FFF0B6',accent:'#F9E191'},
+    {name:'Midnight',primary:'#6872C8',secondary:'#AEB6F4',accent:'#8D98E9'},
+    {name:'Rose',primary:'#E991B7',secondary:'#FFD2E2',accent:'#F8B7D0'},
+    {name:'Aqua',primary:'#5ACFC9',secondary:'#B7F4EC',accent:'#89E1DA'},
+    {name:'Slate',primary:'#899CB8',secondary:'#D1DDED',accent:'#B5C4D8'},
+    {name:'Sunset',primary:'#F29A58',secondary:'#FFD7A0',accent:'#FFBD77'},
+    {name:'Ghost',primary:'#DAD8E8',secondary:'#F6F4FF',accent:'#E9E5F6'},
+    {name:'Berry',primary:'#B95E9B',secondary:'#F1B4D6',accent:'#D982B7'},
+    {name:'Ocean',primary:'#397EB8',secondary:'#9BD7F3',accent:'#72BDE4'},
+    {name:'Forest',primary:'#609B74',secondary:'#B9DBA9',accent:'#8FC89B'},
+    {name:'Candy',primary:'#E878B0',secondary:'#FFC4E0',accent:'#F6A2CC'},
+    {name:'Ember',primary:'#D87956',secondary:'#F3C08B',accent:'#EBA373'},
+    {name:'Stardust',primary:'#7977B9',secondary:'#E0C5EF',accent:'#B4A7E0'}
+  ];
+
+  const HATS = [
+    ['none','No hat','○'],['beanie','Beanie','♧'],['beret','Beret','◒'],['cap','Baseball cap','⌒'],['bucket','Bucket hat','⌂'],['sunhat','Sun hat','☼'],['cowboy','Cowboy hat','⌃'],['party','Party hat','△'],['wizard','Wizard hat','✦'],['crown','Crown','♛'],['flowers','Flower crown','❀'],['tophat','Top hat','▱'],['chef','Chef hat','♨'],['grad','Graduation cap','▰'],['hood','Soft hood','◡'],['earmuffs','Earmuffs','♫']
+  ].map(([id,label,icon])=>({id,label,icon}));
+  const GLASSES = [
+    ['none','None'],['round','Round'],['oval','Oval'],['square','Square'],['heart','Heart'],['star','Star'],['sunglasses','Sunglasses'],['goggles','Soft goggles'],['monocle','Monocle'],['wire','Thin wire']
+  ].map(([id,label])=>({id,label}));
+  const ACCESSORIES = [
+    ['sparkle','Sparkle','✦'],['halo','Halo ring','◯'],['bow','Bow','✿'],['bowtie','Bow tie','◇'],['headphones','Headphones','♫'],['sprout','Sprout','♧'],['antenna','Soft antenna','⌁'],['scarf','Scarf','〰'],['collar','Collar','⌄'],['cape','Tiny cape','◡'],['wings','Soft wings','❋'],['star','Floating star','✦'],['heart','Floating heart','♡'],['bubble','Bubble','○'],['book','Little book','▤'],['flower','Flower','❀'],['leaf','Leaf','❧'],['badge','Badge','✧']].map(([id,label,icon])=>({id,label,icon}));
+  const ACC_SPOTS={sparkle:[25,-18],star:[-25,-22],halo:[0,-38],bow:[18,-24],bowtie:[0,32],headphones:[0,-6],sprout:[6,-12],antenna:[0,-32],scarf:[0,0],collar:[0,-2],cape:[0,1],wings:[0,10],heart:[28,-4],bubble:[28,-8],book:[26,30],flower:[-22,-10],leaf:[-22,-10],badge:[-20,34]};
+  function neatSpot(type){return ACC_SPOTS[type]||[24,-6];}
+  function makeAccessory(type,color){const spot=neatSpot(type);return {id:uid(),type,color:color||'#fff0b2',scale:1,x:spot[0],y:spot[1],rotation:0,opacity:100,visible:true,locked:false};}
+  const EYE_STYLES = ['Dot','Capsule','Oval','Wide pupil','Sleepy lids','Half-moon','Closed line','Wink','Sparkle','Heart','Star','Spiral','Pixel','Surprised','Tiny bead','Glassy'];
+  const MOUTHS = ['None','Tiny smile','Open O','Cat W','Flat line','Grin','Tongue','Zig-zag'];
+  const STATES = [
+    ['idle','Idle','☾'],['thinking','Thinking','···'],['working','Working','⚒'],['listening','Listening','◖'],['speaking','Speaking','♪'],['waiting','Waiting','z'],['done','Done','✓'],['blocked','Blocked','!'],['celebrate','Celebrate','✧'],['orbit','Orbit','◌']
+  ];
+  const EXPRESSIONS = ['Friendly','Curious','Happy','Calm','Sleepy','Surprised','Playful','Shy','Confident','Mischievous','Loving','Focused'];
+
+  function newConfig(name='Pip', shape='cloud', palette=PALETTES[2]) {
+    return {
+      schemaVersion:1,id:uid(),name,handle:`@${slug(name)}-buddy`,roleLabel:'Curious companion',bio:'A curious little cloud with a soft glow.',moodTags:['Curious','Kind'],
+      shape,primary:palette.primary,secondary:palette.secondary,accent:palette.accent,outline:'#ffffff',eyeColor:'#29253b',blushColor:'#f39db9',hatColor:'#e9a5c4',hatTrim:'#ffe3a7',glassesColor:'#302943',backgroundColor:'#1b1b2b',
+      size:1,shapeWidth:1,shapeHeight:1,roundness:55,asymmetry:12,tilt:0,wobbleAmount:35,wobbleSpeed:45,texture:34,shine:24,glow:25,outlineWidth:1,
+      eyeStyle:'Capsule',eyeSize:7.2,eyeSpacing:23,eyeY:62,eyeTilt:0,pupilSize:2.4,eyeHighlight:true,linkEyes:true,rightEyeStyle:'Capsule',
+      expression:'Curious',mouth:'Tiny smile',mouthSize:1,mouthY:80,browStyle:'None',noseStyle:'None',blush:true,blushOpacity:40,freckles:false,
+      material:'Plush/Fuzzy',pattern:'None',patternScale:1,patternOpacity:22,
+      hat:'beret',hatScale:1,hatTilt:-4,hatX:0,hatY:0,
+      glasses:'none',glassesScale:1,glassesTilt:0,glassesX:0,glassesY:0,lensTint:'#a795df',
+      accessories:[makeAccessory('sparkle','#fff0b2')],selectedAccessoryId:null,
+      layerOrder:['body','face','blush','glasses','hat','accessories','effects'],layerVisibility:{body:true,face:true,blush:true,glasses:true,hat:true,accessories:true,effects:true},layerLocked:{},
+      backgroundMode:'Transparent',stageMode:'spotlight',stageOffsetX:0,stageOffsetY:0,state:'idle',blinkEnabled:true,wobbleEnabled:true,breatheEnabled:true,followCursor:false,animationSpeed:1,selectedSize:128,zoom:1,theme:'dark',favorite:false
+    };
+  }
+  function slug(s){return String(s||'dot').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'dot';}
+  const defaultConfig = newConfig();
+  let dots = [];
+  let config = null;
+  let activeId = null;
+  let selectedTab = 'shape';
+  let selectedCategory = 'All';
+  let shapeSearch = '';
+  let history = [];
+  let redoStack = [];
+  let toastTimer = null;
+  let playTimer = null;
+  let playingAll = false;
+  let currentZoom = 1;
+  let modalReturnFocus = null;
+
+  function loadStore(){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){const parsed=JSON.parse(raw); if(Array.isArray(parsed)&&parsed.length){dots=parsed;}}
+    } catch(e) { console.warn('Could not read local DotStudio data',e); }
+    if(!dots.length){dots=[clone(defaultConfig)];}
+    const hashConfig=readHashConfig();
+    if(hashConfig){
+      const imported=normalizeConfig(hashConfig);
+      const existing=dots.find(d=>d.id===imported.id);
+      if(existing) dots=dots.map(d=>d.id===existing.id?imported:d); else dots.unshift(imported);
+      activeId=imported.id;
+    } else activeId=dots[0].id;
+    config=clone(dots.find(d=>d.id===activeId)||dots[0]);
+    try {const prefs=JSON.parse(localStorage.getItem(PREF_KEY)||'{}');if(prefs.theme==='light')document.body.classList.add('light-theme');}catch{}
+    persist();
+  }
+  function normalizeConfig(value){
+    const safe=clone(defaultConfig);
+    if(!value||typeof value!=='object')return safe;
+    for(const key of Object.keys(safe)) if(value[key]!==undefined) safe[key]=value[key];
+    safe.id=typeof value.id==='string'?value.id:uid();
+    safe.name=String(value.name||'My Dot').slice(0,28);
+    safe.handle=String(value.handle||`@${slug(safe.name)}-buddy`).slice(0,48);
+    safe.shape=PATHS[value.shape]?value.shape:'orb';
+    safe.glasses=String(value.glasses||'none').toLowerCase();
+    safe.primary=safeColor(value.primary,'#b49ef2');safe.secondary=safeColor(value.secondary,'#dfd3ff');safe.accent=safeColor(value.accent,'#d0b9ff');safe.eyeColor=safeColor(value.eyeColor,'#29253b');safe.blushColor=safeColor(value.blushColor,'#f39db9');safe.hatColor=safeColor(value.hatColor,'#e9a5c4');safe.hatTrim=safeColor(value.hatTrim,'#ffe3a7');safe.glassesColor=safeColor(value.glassesColor,'#302943');safe.backgroundColor=safeColor(value.backgroundColor,'#1b1b2b');safe.eyeHighlight=clamp(Number(value.eyeHighlight||true),0,1);
+    safe.accessories=Array.isArray(value.accessories)?value.accessories.filter(a=>a&&typeof a==='object').slice(0,12).map(a=>({id:String(a.id||uid()),type:ACCESSORIES.some(x=>x.id===a.type)?a.type:'sparkle',color:safeColor(a.color,'#fff0b2'),scale:clamp(Number(a.scale)||1,.3,2.5),x:clamp(Number(a.x)||0,-45,45),y:clamp(Number(a.y)||0,-45,45),rotation:clamp(Number(a.rotation)||0,-180,180),opacity:clamp(Number(a.opacity)||100,0,100),visible:a.visible!==false,locked:!!a.locked})):[];
+    return safe;
+  }
+  function safeColor(c,fallback){return /^#[0-9a-fA-F]{6}$/.test(String(c))?String(c):fallback;}
+  function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+  function persist(){
+    if(config){const idx=dots.findIndex(d=>d.id===config.id);if(idx>=0)dots[idx]=clone(config);else dots.unshift(clone(config));}
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(dots));}catch(e){console.warn('Could not save DotStudio data',e);}
+    renderDotList();
+    const count=$('#dotCount');if(count)count.textContent=String(dots.length);
+  }
+  function remember(){history.push(clone(config));if(history.length>60)history.shift();redoStack=[];updateUndoButtons();}
+  function applyConfig(next,{panel=false,list=true,toast=false}={}){
+    config=normalizeConfig(next);activeId=config.id;persist();renderAvatar();updateIdentity();updateContext();updateMoodButtons();updateSliderOutputs();if(panel)renderPanel();if(list)renderDotList();if(toast)showToast('Changes saved on this device');
+  }
+  function updateUndoButtons(){const u=$('#undoBtn'),r=$('#redoBtn');if(u)u.disabled=history.length===0;if(r)r.disabled=redoStack.length===0;}
+  function undo(){if(!history.length)return;redoStack.push(clone(config));config=history.pop();persist();renderAvatar();updateIdentity();updateContext();renderPanel();updateMoodButtons();updateUndoButtons();showToast('Undo');}
+  function redo(){if(!redoStack.length)return;history.push(clone(config));config=redoStack.pop();persist();renderAvatar();updateIdentity();updateContext();renderPanel();updateMoodButtons();updateUndoButtons();showToast('Redo');}
+  function showToast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2200);}
+  function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function updateIdentity(){
+    const name=config.name||'Untitled Dot';
+    $('#breadcrumbName').textContent=name;$('#nameInput').value=name;$('#stageName').textContent=name;$('#stageHandle').textContent=config.handle||`@${slug(name)}-buddy`;
+    $('#mockChatName').textContent=name;$('#mockNoticeName').textContent=`${name} is here to help.`;
+    $('#stageDescription').textContent=config.bio||`${config.expression||'Friendly'} little ${shapeLabel(config.shape).toLowerCase()} with a soft glow.`;
+    $('#stateLabel').textContent=(STATES.find(s=>s[0]===config.state)?.[1]||'IDLE').toUpperCase();
+    document.title=`${name} — DotStudio`;
+  }
+  function shapeLabel(id){return SHAPES.find(s=>s.id===id)?.label||'Dot';}
+  function updateContext(){
+    const color=config.primary||'#b49ef2';
+    ['#mockChatAvatar','#mockProfileAvatar','#mockNoticeAvatar'].forEach(sel=>{const el=$(sel);if(el){el.style.background=`radial-gradient(circle at 32% 26%, ${config.secondary||'#dfd3ff'}, ${color} 70%)`;}});
+  }
+  function renderDotList(){
+    const list=$('#dotList');if(!list)return;
+    list.innerHTML=dots.map(d=>`<button class="dot-list-item ${d.id===activeId?'active':''}" data-dot-id="${escapeHtml(d.id)}"><span class="mini-dot" style="background:radial-gradient(circle at 30% 25%,${safeColor(d.secondary,'#dfd3ff')},${safeColor(d.primary,'#b49ef2')} 70%)"></span><span class="dot-meta"><strong>${escapeHtml(d.name||'Untitled')}</strong><small>${escapeHtml(shapeLabel(d.shape))} · ${escapeHtml(d.expression||'Friendly')}</small></span></button>`).join('');
+  }
+
+  function rgb(hex){const s=safeColor(hex,'#b49ef2').slice(1);return [parseInt(s.slice(0,2),16),parseInt(s.slice(2,4),16),parseInt(s.slice(4,6),16)];}
+  function alphaColor(hex,a){const [r,g,b]=rgb(hex);return `rgba(${r},${g},${b},${a})`;}
+  function hexToLight(hex,amount=.2){const [r,g,b]=rgb(hex);return '#'+[r,g,b].map(v=>Math.round(v+(255-v)*amount).toString(16).padStart(2,'0')).join('');}
+  function hexToDark(hex,amount=.16){const [r,g,b]=rgb(hex);return '#'+[r,g,b].map(v=>Math.round(v*(1-amount)).toString(16).padStart(2,'0')).join('');}
+  function shapeBackExtras(id,c){
+    const soft=hexToLight(c,.12);const dark=hexToDark(c,.12);
+    switch(id){
+      case 'sun':return Array.from({length:10},(_,i)=>{const a=i*36;return `<ellipse cx="50" cy="61" rx="4.2" ry="12" fill="${c}" transform="rotate(${a} 50 61)" opacity=".88"/>`;}).join('');
+      case 'flower':return Array.from({length:8},(_,i)=>{const a=i*45;return `<ellipse cx="50" cy="54" rx="8" ry="17" fill="${soft}" transform="rotate(${a} 50 63)" opacity=".92"/>`;}).join('');
+      case 'bunny':return `<ellipse cx="35" cy="33" rx="8" ry="21" fill="${c}" transform="rotate(-13 35 33)"/><ellipse cx="65" cy="33" rx="8" ry="21" fill="${c}" transform="rotate(13 65 33)"/><ellipse cx="35" cy="34" rx="3" ry="13" fill="${hexToLight(c,.42)}" transform="rotate(-13 35 34)"/><ellipse cx="65" cy="34" rx="3" ry="13" fill="${hexToLight(c,.42)}" transform="rotate(13 65 34)"/>`;
+      case 'frog':return `<circle cx="34" cy="38" r="12" fill="${c}"/><circle cx="66" cy="38" r="12" fill="${c}"/>`;
+      case 'chick':return `<path d="M47 24 Q50 12 55 22 Q61 12 62 27Z" fill="${hexToLight(c,.08)}"/>`;
+      case 'whale':return `<path d="M17 70 Q4 62 3 53 Q13 56 19 61Z" fill="${c}"/><path d="M18 79 Q5 88 5 97 Q16 92 22 84Z" fill="${c}"/>`;
+      case 'turtle':return `<ellipse cx="50" cy="64" rx="29" ry="24" fill="${hexToDark(c,.09)}" opacity=".82"/><path d="M28 63 Q50 36 72 63 Q64 86 50 87 Q36 85 28 63Z" fill="${hexToLight(c,.08)}" opacity=".72"/>`;
+      case 'dragon':return `<path d="M22 51 Q6 34 8 29 Q24 33 35 47Z" fill="${soft}"/><path d="M78 51 Q94 34 92 29 Q76 33 65 47Z" fill="${soft}"/><path d="M40 30 L45 20 L50 33Z M58 31 L66 20 L67 37Z" fill="${dark}"/>`;
+      case 'octopus':return `<path d="M29 82 Q19 92 20 101 Q28 105 34 94 M42 91 Q38 102 42 108 Q49 110 50 96 M57 91 Q63 102 59 108 Q52 110 50 96 M72 82 Q82 91 80 100 Q72 105 66 94" fill="none" stroke="${c}" stroke-width="8" stroke-linecap="round"/>`;
+      case 'sprout':return `<path d="M50 40 Q51 22 51 18" stroke="${hexToDark(c,.22)}" stroke-width="3" stroke-linecap="round"/><path d="M51 28 Q35 9 26 20 Q31 35 50 33Z" fill="#8fd3a3"/><path d="M51 24 Q62 6 76 14 Q76 29 52 31Z" fill="#a7e0a7"/>`;
+      case 'berry':return `<path d="M50 34 Q37 23 27 31 Q37 35 47 40 Q35 36 29 42 Q42 44 50 40 Q58 45 72 41 Q65 33 54 36 Q65 31 70 24 Q56 24 50 34Z" fill="#8acb91"/>`;
+      case 'mushroom':return `<circle cx="35" cy="47" r="3" fill="${hexToLight(c,.32)}"/><circle cx="60" cy="38" r="3.5" fill="${hexToLight(c,.32)}"/><circle cx="73" cy="51" r="2.5" fill="${hexToLight(c,.32)}"/>`;
+      case 'cupcake':return `<path d="M25 64 Q50 48 75 64 L70 101 Q50 108 30 101Z" fill="${hexToDark(c,.14)}" opacity=".75"/><path d="M31 73 L34 99 M44 68 L46 103 M58 68 L57 103 M70 73 L66 99" stroke="${hexToLight(c,.24)}" stroke-width="2" opacity=".65"/>`;
+      case 'sunball':return '';
+      default:return '';
+    }
+  }
+  function shapeFrontExtras(id,c){
+    switch(id){
+      case 'turtle':return `<path d="M40 54 Q50 45 60 54 M38 64 Q50 55 62 64 M40 74 Q50 65 60 74" fill="none" stroke="${hexToDark(c,.22)}" stroke-width="2" opacity=".7"/>`;
+      case 'snowball':return `<circle cx="27" cy="42" r="2" fill="${hexToLight(c,.35)}"/><circle cx="73" cy="52" r="2.5" fill="${hexToLight(c,.35)}"/><circle cx="30" cy="80" r="1.8" fill="${hexToLight(c,.35)}"/>`;
+      case 'leaf':return `<path d="M28 87 Q47 61 73 40 M43 70 Q39 57 29 54 M55 57 Q55 47 64 42" stroke="${hexToDark(c,.23)}" stroke-width="2" fill="none" stroke-linecap="round" opacity=".62"/>`;
+      case 'berry':return `<circle cx="33" cy="60" r="1.8" fill="#fff2d9"/><circle cx="69" cy="65" r="1.8" fill="#fff2d9"/><circle cx="50" cy="82" r="1.8" fill="#fff2d9"/>`;
+      case 'mushroom':return `<path d="M35 68 Q50 76 66 68" fill="none" stroke="${hexToDark(c,.16)}" stroke-width="2" opacity=".4"/>`;
+      case 'cupcake':return `<path d="M23 61 C22 42 34 34 44 39 C49 25 65 31 67 43 C83 41 84 56 77 64Z" fill="${hexToLight(c,.3)}"/>`;
+      case 'whale':return `<path d="M75 83 Q82 90 78 95 M80 84 Q88 88 87 94" fill="none" stroke="${hexToDark(c,.12)}" stroke-width="2" stroke-linecap="round"/>`;
+      default:return '';
+    }
+  }
+  function starPoints(cx,cy,outer,inner,n=5){let p='';for(let i=0;i<n*2;i++){const r=i%2===0?outer:inner;const a=(-90+i*180/n)*Math.PI/180;p+=(i?'L':'M')+(cx+Math.cos(a)*r).toFixed(2)+' '+(cy+Math.sin(a)*r).toFixed(2)+' ';}return p+'Z';}
+  function renderBody(){
+    const p=PATHS[config.shape]||PATHS.orb;const c=config.primary;const extras=shapeBackExtras(config.shape,c);const front=shapeFrontExtras(config.shape,c);
+    const fuzzy=['Plush/Fuzzy','Fuzzy Felt'].includes(config.material);
+    const textureFilter=fuzzy?`filter="url(#softTexture)"`:'';
+    const outlineWidth=clamp(Number(config.outlineWidth)||0,0,4);
+    const softness=clamp(Number(config.roundness)||55,0,100);
+    const glowWidth=clamp(Number(config.glow)||0,0,100)/28;
+    const glow=`<path d="${p}" fill="none" stroke="${config.accent}" stroke-width="${glowWidth}" opacity="${clamp(Number(config.glow)||0,0,100)/320}"/>`;
+    const highlight=`<ellipse cx="35" cy="42" rx="19" ry="15" fill="url(#bodyGlow)" clip-path="url(#bodyClip)" opacity="${clamp(Number(config.shine)||0,0,70)/55}"/>`;
+    const softnessStroke=softness>0?`<path d="${p}" fill="none" stroke="${hexToLight(c,.23)}" stroke-width="${softness/90}" opacity="${softness/500}"/>`:'';
+    return `<g class="body-group">${extras}<g filter="url(#softShadow)"><path class="body-shape" d="${p}" fill="url(#bodyGradient)" stroke="${safeColor(config.outline,'#ffffff')}" stroke-opacity="${outlineWidth/12}" stroke-width="${outlineWidth}" stroke-linejoin="round" ${textureFilter}/>${glow}${highlight}${softnessStroke}<path d="${front}"/>${renderPattern()}</g></g>`;
+  }
+  function renderPattern(){
+    const p=config.pattern||'None'; if(p==='None')return '';
+    let shape='';const color=hexToLight(config.primary,.45);const opacity=clamp(Number(config.patternOpacity)/100,.08,.65);
+    if(p==='Spots'||p==='Polka dots')shape='<circle cx="33" cy="48" r="3"/><circle cx="70" cy="52" r="2.4"/><circle cx="39" cy="83" r="2"/><circle cx="66" cy="78" r="3"/>';
+    else if(p==='Stars')shape=`<path d="${starPoints(31,52,4,1.7)}"/><path d="${starPoints(70,76,4,1.7)}"/><path d="${starPoints(67,46,2.5,1)}"/>`;
+    else if(p==='Stripes')shape='<path d="M22 51 Q50 43 79 52 M19 67 Q49 59 81 68 M24 82 Q49 75 76 82" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>';
+    else if(p==='Freckles')shape='<circle cx="31" cy="71" r="1.5"/><circle cx="36" cy="75" r="1.3"/><circle cx="69" cy="71" r="1.5"/><circle cx="64" cy="75" r="1.3"/>';
+    else if(p==='Swirls')shape='<path d="M25 58 Q34 49 41 58 Q45 64 39 68 M73 75 Q66 83 60 77 Q56 71 62 68" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>';
+    else if(p==='Hearts')shape=`<path d="M31 52 C28 48 22 52 25 57 L31 62 L37 57 C40 52 34 48 31 52Z"/><path d="M70 79 C67 75 61 79 64 84 L70 89 L76 84 C79 79 73 75 70 79Z"/>`;
+    return `<g clip-path="url(#bodyClip)" fill="${color}" color="${color}" opacity="${opacity}">${shape}</g>`;
+  }
+  function renderEye(cx,cy,style,index){
+    const sz=clamp(Number(config.eyeSize)||7,3,16);const h=sz*1.34;const color=config.eyeColor||'#29253b';const tilt=(Number(config.eyeTilt)||0)*(index===0?-1:1);const x=cx-sz/2;const y=cy-h/2;
+    let art='';
+    const psize=clamp(Number(config.pupilSize)||2,1,sz*.6);
+    switch(style){
+      case 'Dot':case 'Tiny bead': art=`<circle cx="${cx}" cy="${cy}" r="${Math.max(2,sz*.44)}" fill="${color}"/>`;break;
+      case 'Oval':case 'Capsule':art=`<rect x="${x}" y="${y}" width="${sz}" height="${h}" rx="${sz/2}" fill="${color}"/>`;break;
+      case 'Wide pupil':art=`<ellipse cx="${cx}" cy="${cy}" rx="${sz*.67}" ry="${h*.44}" fill="${color}"/><circle class="pupil" cx="${cx+sz*.08}" cy="${cy}" r="${psize*.62}" fill="${hexToLight(color,.76)}"/>`;break;
+      case 'Sleepy lids':case 'Half-moon':case 'Closed line':art=`<path d="M${cx-sz*.58} ${cy+1} Q${cx} ${cy+sz*.64} ${cx+sz*.58} ${cy+1}" fill="none" stroke="${color}" stroke-width="${Math.max(2,sz*.35)}" stroke-linecap="round"/>`;break;
+      case 'Wink':art=index===0?`<rect x="${x}" y="${y}" width="${sz}" height="${h}" rx="${sz/2}" fill="${color}"/>`:`<path d="M${cx-sz*.6} ${cy} Q${cx} ${cy+sz*.55} ${cx+sz*.6} ${cy}" fill="none" stroke="${color}" stroke-width="${Math.max(2,sz*.3)}" stroke-linecap="round"/>`;break;
+      case 'Sparkle':art=`<path d="${starPoints(cx,cy,sz*.77,sz*.28,4)}" fill="${color}"/>`;break;
+      case 'Heart':art=`<path d="M${cx} ${cy+sz*.55} C${cx-sz*.17} ${cy+sz*.34} ${cx-sz*.76} ${cy-sz*.1} ${cx-sz*.5} ${cy-sz*.5} C${cx-sz*.28} ${cy-sz*.8} ${cx} ${cy-sz*.48} ${cx} ${cy-sz*.35} C${cx+sz*.15} ${cy-sz*.78} ${cx+sz*.69} ${cy-sz*.68} ${cx+sz*.57} ${cy-sz*.25} C${cx+sz*.49} ${cy+.02*sz} ${cx+sz*.17} ${cy+sz*.4} ${cx} ${cy+sz*.55}Z" fill="${color}"/>`;break;
+      case 'Star':art=`<path d="${starPoints(cx,cy,sz*.72,sz*.34,5)}" fill="${color}"/>`;break;
+      case 'Spiral':art=`<path d="M${cx+sz*.4} ${cy} C${cx+sz*.4} ${cy-sz*.5} ${cx-sz*.4} ${cy-sz*.5} ${cx-sz*.4} ${cy} C${cx-sz*.4} ${cy+sz*.45} ${cx+sz*.2} ${cy+sz*.4} ${cx+sz*.18} ${cy+sz*.05} C${cx+sz*.16} ${cy-sz*.12} ${cx-sz*.04} ${cy-sz*.1} ${cx-sz*.04} ${cy+.02*sz}" fill="none" stroke="${color}" stroke-width="${Math.max(1.8,sz*.22)}" stroke-linecap="round"/>`;break;
+      case 'Pixel':art=`<path d="M${cx-sz*.45} ${cy-h*.45}h${sz*.45}v${h*.22}h${sz*.45}v${h*.23}h-${sz*.23}v${h*.45}h-${sz*.45}v-${h*.22}h-${sz*.22}v-${h*.45}h${sz*.22}Z" fill="${color}"/>`;break;
+      case 'Surprised':art=`<circle cx="${cx}" cy="${cy}" r="${sz*.62}" fill="#fbf8ff"/><circle class="pupil" cx="${cx}" cy="${cy}" r="${psize}" fill="${color}"/>`;break;
+      case 'Glassy':art=`<ellipse cx="${cx}" cy="${cy}" rx="${sz*.6}" ry="${h*.48}" fill="#fff8ff"/><ellipse cx="${cx}" cy="${cy+1}" rx="${sz*.36}" ry="${h*.37}" fill="${color}"/><circle class="pupil" cx="${cx+1}" cy="${cy-1}" r="${psize*.65}" fill="#fff" opacity=".9"/>`;break;
+      default:art=`<rect x="${x}" y="${y}" width="${sz}" height="${h}" rx="${sz/2}" fill="${color}"/>`;
+    }
+    if(config.eyeHighlight&&['Capsule','Oval','Wide pupil','Glassy','Surprised'].includes(style)&&sz>=5){art+=`<circle cx="${cx-sz*.18}" cy="${cy-h*.2}" r="${Math.max(1,sz*.12)}" fill="#fff" opacity=".92"/>`;}
+    return `<g class="eye eye-${index}" transform="rotate(${tilt} ${cx} ${cy})">${art}</g>`;
+  }
+  function renderFace(){
+    const center=50;const gap=clamp(Number(config.eyeSpacing)||23,12,42);const left=center-gap/2;const right=center+gap/2;
+    // Save original eye style before state/expression overrides
+    const originalEyeStyle=config.eyeStyle||'Capsule';
+    let eyeStyle=originalEyeStyle;
+    // State-based eye style adjustments (only apply when user hasn't selected a specific style)
+    // If user explicitly chose an eye style, preserve it unless it's incompatible with the state
+    const userSelectedEyeStyle = config.eyeStyle && config.eyeStyle !== 'Capsule';
+    let eyeStyle = originalEyeStyle;
+    if(config.state==='waiting'&&!userSelectedEyeStyle)eyeStyle='Sleepy lids';
+    if((config.state==='done'||config.state==='celebrate')&&!userSelectedEyeStyle)eyeStyle='Half-moon';
+    if(config.state==='blocked'&&!userSelectedEyeStyle)eyeStyle='Dot';
+    if(config.expression==='Sleepy'&&!userSelectedEyeStyle)eyeStyle='Sleepy lids';
+    if(config.expression==='Happy'||config.expression==='Loving')eyeStyle='Half-moon';
+    if(config.expression==='Surprised'&&!userSelectedEyeStyle)eyeStyle='Surprised';
+    const rightStyle=config.linkEyes===false?config.rightEyeStyle:effectiveEyeStyle;
+    const y=clamp(Number(config.eyeY)||62,42,82);let mouth=config.mouth||'None';
+    if(config.state==='speaking'&&mouth==='None')mouth='Open O';if(config.expression==='Happy'&&mouth==='None')mouth='Tiny smile';
+    let mouthArt='';const mx=50,my=Number(config.mouthY)||80,ms=Number(config.mouthSize)||1;
+    switch(mouth){
+      case 'Tiny smile':mouthArt=`<path d="M${mx-5*ms} ${my} Q${mx} ${my+5*ms} ${mx+5*ms} ${my}" fill="none" stroke="${config.eyeColor}" stroke-width="2.1" stroke-linecap="round"/>`;break;
+      case 'Open O':mouthArt=`<ellipse cx="${mx}" cy="${my+1}" rx="${3.3*ms}" ry="${4.3*ms}" fill="${config.eyeColor}"/><ellipse cx="${mx}" cy="${my+2}" rx="${1.6*ms}" ry="${1.5*ms}" fill="#f0aac6"/>`;break;
+      case 'Cat W':mouthArt=`<path d="M${mx-7*ms} ${my} Q${mx-4*ms} ${my+5*ms} ${mx} ${my} Q${mx+4*ms} ${my+5*ms} ${mx+7*ms} ${my}" fill="none" stroke="${config.eyeColor}" stroke-width="1.8" stroke-linecap="round"/>`;break;
+      case 'Flat line':mouthArt=`<path d="M${mx-5*ms} ${my} H${mx+5*ms}" stroke="${config.eyeColor}" stroke-width="2" stroke-linecap="round"/>`;break;
+      case 'Grin':mouthArt=`<path d="M${mx-7*ms} ${my-1} Q${mx} ${my+8*ms} ${mx+7*ms} ${my-1} Q${mx+6*ms} ${my+5*ms} ${mx} ${my+5*ms} Q${mx-6*ms} ${my+5*ms} ${mx-7*ms} ${my-1}Z" fill="${config.eyeColor}"/><path d="M${mx-4*ms} ${my+2*ms} H${mx+4*ms}" stroke="#fff4f5" stroke-width="1.2"/>`;break;
+      case 'Tongue':mouthArt=`<path d="M${mx-5*ms} ${my-1} Q${mx} ${my+5*ms} ${mx+5*ms} ${my-1}" fill="none" stroke="${config.eyeColor}" stroke-width="2"/><ellipse cx="${mx}" cy="${my+4}" rx="2.5" ry="3" fill="#f29cbc"/>`;break;
+      case 'Zig-zag':mouthArt=`<path d="M${mx-6*ms} ${my} L${mx-3*ms} ${my-2} L${mx} ${my+2} L${mx+3*ms} ${my-2} L${mx+6*ms} ${my}" fill="none" stroke="${config.eyeColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;break;
+    }
+    let brows='';if(config.browStyle&&config.browStyle!=='None'){brows=`<path d="M${left-4} ${y-12} Q${left} ${y-15} ${left+4} ${y-12} M${right-4} ${y-12} Q${right} ${y-15} ${right+4} ${y-12}" fill="none" stroke="${config.eyeColor}" stroke-width="1.6" stroke-linecap="round"/>`;}
+    let nose='';if(config.noseStyle&&config.noseStyle!=='None'){nose=`<circle cx="50" cy="73" r="2" fill="${config.accent}" opacity=".85"/>`;}
+    return `<g class="face-content">${brows}${renderEye(left,y,eyeStyle,0)}${renderEye(right,y,rightStyle,1)}${nose}<g id="mouthGroup">${mouthArt}</g></g>`;
+  }
+  function renderBlush(){
+    if(!config.blush)return '';
+    const op=clamp(Number(config.blushOpacity)/100,0,1);return `<g class="blush" fill="${config.blushColor}" opacity="${op}"><ellipse cx="27" cy="75" rx="6.5" ry="3.2"/><ellipse cx="73" cy="75" rx="6.5" ry="3.2"/>${config.freckles?'<circle cx="28" cy="74" r=".8" fill="#a76b79"/><circle cx="31" cy="76" r=".7" fill="#a76b79"/><circle cx="69" cy="74" r=".8" fill="#a76b79"/><circle cx="72" cy="76" r=".7" fill="#a76b79"/>':''}</g>`;
+  }
+  function renderHat(){
+    const type=config.hat||'none';if(type==='none')return '';
+    const c=config.hatColor||'#e9a5c4',t=config.hatTrim||'#ffe3a7';let art='';
+    switch(type){
+      case 'beanie':art=`<path d="M25 31 C24 13 35 5 50 5 C66 5 77 14 76 31Z" fill="${c}"/><path d="M25 27 Q50 31 76 27 L76 34 Q50 38 24 34Z" fill="${t}"/><circle cx="50" cy="6" r="5" fill="${t}"/>`;break;
+      case 'beret':art=`<ellipse cx="50" cy="26" rx="29" ry="9" fill="${t}"/><path d="M24 25 C25 10 41 5 58 8 C73 11 79 20 76 27 Q51 32 24 25Z" fill="${c}"/><path d="M54 9 L57 4" stroke="${t}" stroke-width="3" stroke-linecap="round"/>`;break;
+      case 'cap':art=`<path d="M22 27 C24 12 38 7 52 8 C67 9 76 17 76 28Z" fill="${c}"/><path d="M47 27 Q68 25 86 32 Q74 39 49 34Z" fill="${t}"/><path d="M40 11 Q50 9 59 12" stroke="${t}" stroke-width="2" fill="none"/>`;break;
+      case 'bucket':art=`<path d="M29 10 Q50 4 71 10 L76 29 Q50 37 24 29Z" fill="${c}"/><path d="M20 29 Q50 34 80 29 L77 35 Q50 42 23 35Z" fill="${t}"/><path d="M29 15 Q50 20 72 15" stroke="${t}" stroke-width="2" fill="none"/>`;break;
+      case 'sunhat':art=`<path d="M35 12 Q50 5 65 12 L70 28 Q50 33 30 28Z" fill="${c}"/><path d="M10 28 Q50 21 90 28 Q87 37 50 37 Q13 37 10 28Z" fill="${t}"/><path d="M30 26 Q50 31 70 26" stroke="${c}" stroke-width="3" fill="none"/>`;break;
+      case 'cowboy':art=`<path d="M19 25 Q25 20 34 23 Q38 9 50 8 Q63 9 67 23 Q77 20 82 25 Q80 34 50 33 Q21 34 19 25Z" fill="${c}"/><path d="M29 23 Q50 27 71 23" stroke="${t}" stroke-width="3" fill="none"/>`;break;
+      case 'party':art=`<path d="M50 4 L72 33 Q50 28 28 33Z" fill="${c}"/><path d="M34 29 Q50 34 67 29" stroke="${t}" stroke-width="4"/><circle cx="50" cy="5" r="3" fill="${t}"/><circle cx="43" cy="21" r="2" fill="${t}"/><circle cx="58" cy="25" r="2" fill="${t}"/>`;break;
+      case 'wizard':art=`<path d="M50 2 Q55 16 76 30 Q50 36 24 30 Q44 21 50 2Z" fill="${c}"/><ellipse cx="50" cy="31" rx="31" ry="6" fill="${t}"/><path d="M50 13 L52 17 L57 17 L53 20 L55 24 L50 21 L46 24 L47 20 L43 17 L48 17Z" fill="${t}"/>`;break;
+      case 'crown':art=`<path d="M20 31 L24 9 L39 22 L50 5 L62 22 L77 9 L80 31Z" fill="${c}" stroke="${t}" stroke-width="2"/><path d="M23 32 H77 V37 H23Z" fill="${t}"/><circle cx="50" cy="14" r="3" fill="#fff2c0"/>`;break;
+      case 'flowers':art=`<path d="M20 29 Q50 18 80 29" fill="none" stroke="${c}" stroke-width="5" stroke-linecap="round"/>${[30,41,51,61,72].map((x,i)=>`<circle cx="${x}" cy="${i%2?23:20}" r="5" fill="${i%2?'#f4a5c8':'#ffe08f'}"/><circle cx="${x}" cy="${i%2?23:20}" r="1.5" fill="#fff7da"/>`).join('')}`;break;
+      case 'tophat':art=`<path d="M33 11 Q50 6 67 11 L70 28 H30Z" fill="${c}"/><path d="M22 28 Q50 24 78 28 L79 34 Q50 37 21 34Z" fill="${t}"/><path d="M31 23 H69" stroke="${t}" stroke-width="3"/>`;break;
+      case 'chef':art=`<path d="M31 28 C21 21 26 12 35 13 C34 2 47 2 50 10 C56 0 69 4 66 14 C79 12 80 23 70 29Z" fill="${c}"/><path d="M28 28 H73 V35 H28Z" fill="${t}"/>`;break;
+      case 'grad':art=`<path d="M15 17 L50 5 L85 17 L50 30Z" fill="${c}"/><path d="M29 22 V31 Q50 41 71 31 V22" fill="${c}"/><path d="M82 17 V31" stroke="${t}" stroke-width="2"/><circle cx="82" cy="33" r="2.5" fill="${t}"/>`;break;
+      case 'hood':art=`<path d="M22 34 C20 13 32 4 50 4 C68 4 80 13 78 34 L70 39 Q66 18 50 18 Q34 18 30 39Z" fill="${c}" stroke="${t}" stroke-opacity=".7" stroke-width="2"/>`;break;
+      case 'earmuffs':art=`<path d="M27 32 Q27 5 50 5 Q73 5 73 32" fill="none" stroke="${t}" stroke-width="5"/><circle cx="26" cy="32" r="8" fill="${c}"/><circle cx="74" cy="32" r="8" fill="${c}"/>`;break;
+    }
+    const scale=clamp(Number(config.hatScale)||1,.55,1.7);const x=Number(config.hatX)||0,y=Number(config.hatY)||0,tilt=Number(config.hatTilt)||0;
+    return `<g class="hat-layer" transform="translate(${x} ${y}) translate(50 24) rotate(${tilt}) scale(${scale}) translate(-50 -24)">${art}</g>`;
+  }
+  function renderGlasses(){
+    const type=(config.glasses||'none').toLowerCase();if(type==='none')return '';
+    const gap=clamp(Number(config.eyeSpacing)||23,12,42);const x1=50-gap/2,x2=50+gap/2,y=clamp(Number(config.eyeY)||62,42,82);const r=clamp(Number(config.eyeSize)||7,4,15);const color=config.glassesColor||'#302943';const scale=clamp(Number(config.glassesScale)||1,.5,1.8);const tint=alphaColor(config.lensTint||'#a795df',type==='sunglasses'?.34:.1);let lenses='';
+    const lens=(x)=>{if(type==='square'||type==='wire')return `<rect x="${x-r-3}" y="${y-r-3}" width="${(r+3)*2}" height="${(r+3)*2}" rx="${type==='wire'?2:5}" fill="${tint}" stroke="${color}" stroke-width="${type==='wire'?1.2:2.5}"/>`;if(type==='heart')return `<path d="M${x} ${y+r+4} C${x-r} ${y} ${x-r*1.6} ${y-r} ${x-r*.5} ${y-r*1.4} C${x} ${y-r*1.6} ${x} ${y-r*.6} ${x} ${y-r*.4} C${x} ${y-r*1.1} ${x+r*1.4} ${y-r*1.5} ${x+r*1.2} ${y-r*.3} C${x+r} ${y+r} ${x} ${y+r+4} ${x} ${y+r+4}Z" fill="${tint}" stroke="${color}" stroke-width="2"/>`;if(type==='star')return `<path d="${starPoints(x,y,r+4,r*.55,5)}" fill="${tint}" stroke="${color}" stroke-width="2"/>`;if(type==='monocle')return x===x1?`<circle cx="${x}" cy="${y}" r="${r+3}" fill="${tint}" stroke="${color}" stroke-width="2.4"/><path d="M${x} ${y+r+3} Q${x+4} ${y+r+10} ${x+7} ${y+r+14}" stroke="${color}" stroke-width="1.5" fill="none"/>`:'';return `<circle cx="${x}" cy="${y}" r="${r+3}" fill="${tint}" stroke="${color}" stroke-width="${type==='wire'?1.2:2.5}"/>`;};
+    if(type==='sunglasses'){lenses=`<rect x="${x1-r-4}" y="${y-r-2}" width="${2*r+8}" height="${2*r+3}" rx="${r*.45}" fill="${alphaColor(color,.88)}"/><rect x="${x2-r-4}" y="${y-r-2}" width="${2*r+8}" height="${2*r+3}" rx="${r*.45}" fill="${alphaColor(color,.88)}"/>`;}
+    else lenses=lens(x1)+lens(x2);
+    const bridge=type==='monocle'?'':`<path d="M${x1+r+3} ${y-1} Q50 ${y-4} ${x2-r-3} ${y-1}" stroke="${color}" stroke-width="2" fill="none"/>`;
+    return `<g class="glasses-layer" transform="translate(${Number(config.glassesX)||0} ${Number(config.glassesY)||0}) translate(50 ${y}) rotate(${Number(config.glassesTilt)||0}) scale(${scale}) translate(-50 -${y})">${lenses}${bridge}</g>`;
+  }
+  function accessoryMarkup(acc){
+    const c=acc.color||'#fff0b2';const s=clamp(Number(acc.scale)||1,.3,2.5),x=Number(acc.x)||0,y=Number(acc.y)||0,r=Number(acc.rotation)||0,op=clamp(Number(acc.opacity??100)/100,0,1);let art='';
+    switch(acc.type){
+      case 'sparkle':case 'star':art=`<path d="${starPoints(50,50,10,4,5)}" fill="${c}"/>`;break;
+      case 'halo':art=`<ellipse cx="50" cy="48" rx="16" ry="6" fill="none" stroke="${c}" stroke-width="3"/>`;break;
+      case 'bow':art=`<path d="M49 50 Q34 35 28 43 Q26 53 47 53Z M51 50 Q66 35 72 43 Q74 53 53 53Z" fill="${c}"/><circle cx="50" cy="49" r="4" fill="${hexToDark(c,.1)}"/>`;break;
+      case 'bowtie':art=`<path d="M49 52 L33 44 Q30 42 31 50 L33 58 L49 54 L67 58 L69 50 Q70 42 67 44 L51 52Z" fill="${c}"/><circle cx="50" cy="52" r="3" fill="${hexToDark(c,.1)}"/>`;break;
+      case 'headphones':art=`<path d="M25 63 Q23 26 50 25 Q77 26 75 63" fill="none" stroke="${c}" stroke-width="5"/><rect x="20" y="56" width="11" height="18" rx="5" fill="${c}"/><rect x="69" y="56" width="11" height="18" rx="5" fill="${c}"/>`;break;
+      case 'sprout':art=`<path d="M50 57 Q50 41 50 31" stroke="${hexToDark(c,.12)}" stroke-width="3" stroke-linecap="round"/><path d="M50 41 Q33 22 26 36 Q32 49 50 46Z M50 37 Q64 20 75 29 Q73 43 51 45Z" fill="${c}"/>`;break;
+      case 'antenna':art=`<path d="M50 65 Q50 42 50 28" stroke="${c}" stroke-width="3" stroke-linecap="round"/><circle cx="50" cy="24" r="6" fill="${c}"/><circle cx="48" cy="22" r="2" fill="#fff" opacity=".7"/>`;break;
+      case 'scarf':art=`<path d="M24 76 Q50 84 76 76 L74 84 Q50 92 26 84Z" fill="${c}"/><path d="M66 82 L70 100 L61 103 L59 84Z" fill="${c}"/>`;break;
+      case 'collar':art=`<path d="M29 88 Q50 96 71 88 L68 95 Q50 103 32 95Z" fill="${c}"/>`;break;
+      case 'cape':art=`<path d="M28 47 Q50 57 72 47 L82 96 Q50 110 18 96Z" fill="${c}" opacity=".78"/>`;break;
+      case 'wings':art=`<path d="M23 61 Q5 43 8 34 Q27 36 37 55 Q31 68 23 61Z M77 61 Q95 43 92 34 Q73 36 63 55 Q69 68 77 61Z" fill="${c}" opacity=".9"/>`;break;
+      case 'heart':art=`<path d="M50 62 C45 57 32 48 37 40 C41 34 48 38 50 42 C53 36 62 35 65 42 C69 50 56 59 50 62Z" fill="${c}"/>`;break;
+      case 'bubble':art=`<circle cx="50" cy="50" r="10" fill="${alphaColor(c,.22)}" stroke="${c}" stroke-width="2"/><circle cx="46" cy="46" r="2.5" fill="#fff" opacity=".8"/>`;break;
+      case 'book':art=`<path d="M35 38 Q44 35 50 41 Q56 35 65 38 L65 63 Q56 60 50 66 Q44 60 35 63Z" fill="${c}" stroke="${hexToDark(c,.15)}" stroke-width="1.4"/><path d="M50 41 V66" stroke="${hexToDark(c,.2)}" stroke-width="1.5"/>`;break;
+      case 'flower':art=`<g fill="${c}"><circle cx="50" cy="41" r="7"/><circle cx="41" cy="50" r="7"/><circle cx="59" cy="50" r="7"/><circle cx="50" cy="59" r="7"/></g><circle cx="50" cy="50" r="4" fill="#ffdf91"/>`;break;
+      case 'leaf':art=`<path d="M34 57 Q34 33 68 34 Q69 63 42 67 Q35 65 34 57Z" fill="${c}"/><path d="M39 63 Q51 50 64 40" stroke="${hexToDark(c,.22)}" stroke-width="1.8" fill="none"/>`;break;
+      case 'badge':art=`<circle cx="50" cy="50" r="11" fill="${c}" stroke="#fff" stroke-opacity=".5" stroke-width="1.5"/><path d="${starPoints(50,50,6,2.5,5)}" fill="#fff9e8"/>`;break;
+    }
+    return `<g class="accessory" data-acc="${escapeHtml(acc.id)}" opacity="${op}" transform="translate(${x} ${y}) translate(50 50) rotate(${r}) scale(${s}) translate(-50 -50)">${art}</g>`;
+  }
+  function renderEffects(){
+    const state=config.state;let out='';
+    if(state==='thinking')out+=`<g class="thinking-dots" fill="${config.accent}"><circle cx="47" cy="22" r="2.1"/><circle cx="55" cy="19" r="2.8"/><circle cx="64" cy="22" r="2.1"/></g>`;
+    if(state==='working'||state==='orbit'){
+      const rx=state==='orbit'?48:43,ry=state==='orbit'?31:25,tilt=state==='orbit'?-20:16,orbitSpeed=state==='orbit'?'11s':'7s';
+      out+=`<g class="orbit-group" style="--orbit-speed:${orbitSpeed}" aria-hidden="true">
+        <ellipse class="orbit-track" cx="50" cy="64" rx="${rx}" ry="${ry}" fill="none" stroke="${config.accent}" stroke-width=".85" opacity=".24" transform="rotate(${tilt} 50 64)"/>
+        <ellipse class="orbit-trail" cx="50" cy="64" rx="${rx}" ry="${ry}" fill="none" stroke="${config.accent}" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="21 300" opacity=".78" transform="rotate(${tilt} 50 64)"/>
+        <g class="orbit-satellite"><circle cx="50" cy="${64-ry}" r="5.8" fill="${config.accent}" opacity=".2"/><circle cx="50" cy="${64-ry}" r="3.4" fill="${config.accent}"/><circle cx="49" cy="${63-ry}" r="1.05" fill="#fff" opacity=".95"/></g>
+        <g class="orbit-sparkle"><path d="${starPoints(50+rx*.78,64+ry*.2,3.2,1.25,4)}" fill="${hexToLight(config.accent,.2)}" opacity=".9"/></g>
+      </g>`;
+    }
+    if(state==='listening')out+=`<g class="ripples" fill="none" stroke="${config.accent}" stroke-width="1.2"><ellipse cx="50" cy="64" rx="43" ry="42"/><ellipse cx="50" cy="64" rx="50" ry="49"/></g>`;
+    if(state==='waiting')out+=`<g class="zzz" fill="${config.accent}" font-size="8" font-weight="700"><text x="73" y="31">z</text><text x="81" y="23" font-size="6">z</text></g>`;
+    if(state==='done')out+=`<g fill="${config.accent}"><path d="${starPoints(22,41,4,1.7)}"/><path d="${starPoints(78,48,4,1.7)}"/></g>`;
+    if(state==='blocked')out+=`<g><circle cx="79" cy="39" r="7" fill="#f4c978"/><text x="79" y="42" text-anchor="middle" font-size="8" fill="#594626" font-weight="800">!</text></g>`;
+    if(state==='celebrate')out+=`<g class="confetti">${[[20,40,'#ffb1c9'],[80,42,'#a8eed8'],[18,82,'#f7dc88'],[82,78,'#bba8ff'],[30,26,'#94d8f0'],[72,29,'#ffa96f']].map(([x,y,c])=>`<path d="M${x} ${y} l3 -5 l3 6 l-4 4Z" fill="${c}"/>`).join('')}</g>`;
+    return out;
+  }
+  function renderLayer(layer){
+    if(config.layerVisibility&&config.layerVisibility[layer]===false)return '';
+    switch(layer){
+      case 'body':return renderBody();
+      case 'face':return renderFace();
+      case 'blush':return renderBlush();
+      case 'glasses':return renderGlasses();
+      case 'hat':return renderHat();
+      case 'accessories':return (config.accessories||[]).filter(a=>a.visible!==false).map(accessoryMarkup).join('');
+      case 'effects':return renderEffects();
+      default:return '';
+    }
+  }
+  function svgMarkup(cfg=config,{size=512,includeBackground=true,staticFrame=false,pop=false}={}){
+    const old=config;config=cfg;
+    const state=staticFrame?'idle':(cfg.state||'idle');
+    let bg='';
+    if(includeBackground&&cfg.backgroundMode==='Solid')bg=`<rect x="-15" y="0" width="130" height="130" fill="${safeColor(cfg.backgroundColor,'#ffffff')}"/>`;
+    if(includeBackground&&cfg.backgroundMode==='Soft spotlight')bg=`<rect x="-15" y="0" width="130" height="130" fill="${safeColor(cfg.backgroundColor,'#1b1b2b')}"/><ellipse cx="50" cy="58" rx="62" ry="62" fill="url(#exportSpotlight)" opacity=".72"/>`;
+    if(includeBackground&&cfg.backgroundMode==='Dot grid')bg=`<rect x="-15" y="0" width="130" height="130" fill="${safeColor(cfg.backgroundColor,'#1b1b2b')}"/><rect x="-15" y="0" width="130" height="130" fill="url(#exportDotGrid)"/>`;
+    const order=Array.isArray(cfg.layerOrder)?cfg.layerOrder:['body','blush','face','glasses','hat','accessories','effects'];
+    const layers=order.map(renderLayer).join('');
+    const animOff=staticFrame?`.rig,.rig-state,.eye,.thinking-dots circle,.orbit-group,.orbit-satellite,.orbit-sparkle,.orbit-trail,.ripples ellipse,.zzz text,.confetti,.body-shape{animation:none!important}`:'';
+    const asym=clamp((Number(cfg.asymmetry)||0)/1000,-.12,.12);const sx=clamp((Number(cfg.shapeWidth)||1)*(1+asym),.55,1.5);const sy=clamp((Number(cfg.shapeHeight)||1)*(1-asym*.45),.55,1.5);
+    const rigTransform=`translate(50 64) rotate(${Number(cfg.tilt)||0}) scale(${sx} ${sy}) translate(-50 -64)`;
+    const idleSeconds=Math.max(.45,(4.8-clamp(Number(cfg.wobbleSpeed)||45,10,100)/40)/(Number(cfg.animationSpeed)||1));
+    const idleLift=Math.max(0,Number(cfg.wobbleAmount)||0)/16;
+    const svg=`<svg class="avatar-svg" xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="-15 0 130 130" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${escapeHtml(cfg.name||'Dot')} companion avatar">
+      <defs>
+        <linearGradient id="bodyGradient" x1="18%" y1="8%" x2="82%" y2="100%"><stop offset="0" stop-color="${hexToLight(cfg.secondary||cfg.primary,.1)}"/><stop offset=".42" stop-color="${cfg.primary}"/><stop offset="1" stop-color="${hexToDark(cfg.primary,.14)}"/></linearGradient>
+        <radialGradient id="bodyGlow" cx="30%" cy="20%" r="85%"><stop offset="0" stop-color="#fff" stop-opacity="${clamp(Number(cfg.shine)/100,0,.4)}"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+        <radialGradient id="exportSpotlight" cx="50%" cy="45%" r="70%"><stop offset="0" stop-color="${safeColor(cfg.secondary,'#dfd3ff')}"/><stop offset="1" stop-color="${safeColor(cfg.backgroundColor,'#1b1b2b')}"/></radialGradient>
+        <pattern id="exportDotGrid" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".65" fill="${safeColor(cfg.secondary,'#dfd3ff')}" opacity=".48"/></pattern>
+        <filter id="softShadow" x="-40%" y="-30%" width="180%" height="190%"><feDropShadow dx="0" dy="3" stdDeviation="2.7" flood-color="#171126" flood-opacity=".19"/></filter>
+        <filter id="softTexture" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".68" numOctaves="2" seed="7" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="${clamp(Number(cfg.texture)/35,0,2.5)}" xChannelSelector="R" yChannelSelector="G"/></filter>
+        <clipPath id="bodyClip"><path d="${PATHS[cfg.shape]||PATHS.orb}"/></clipPath>
+      </defs>
+      <style>
+        @keyframes idleFloat{0%,100%{transform:translateY(0) rotate(-.8deg)}50%{transform:translateY(-${idleLift}px) rotate(.8deg) scale(1.008)}}
+        @keyframes thinkingFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+        @keyframes workingBounce{0%,100%{transform:translateY(0) scale(1)}45%{transform:translateY(-4px) scale(1.015,.99)}72%{transform:translateY(0) scale(.99,1.01)}}
+        @keyframes waitingBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.018,.99)}}
+        @keyframes breathing{0%,100%{transform:scale(1)}50%{transform:scale(1.018,.985)}}
+        @keyframes doneHop{0%,100%{transform:translateY(0) scale(1)}35%{transform:translateY(-9px) scale(1.04,.95)}65%{transform:translateY(0) scale(.97,1.04)}}
+        @keyframes blockedShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}50%{transform:translateX(2px)}75%{transform:translateX(-1px)}}
+        @keyframes celebrateHop{0%,100%{transform:translateY(0) rotate(0)}35%{transform:translateY(-8px) rotate(-3deg)}70%{transform:translateY(0) rotate(3deg)}}
+        @keyframes statePop{0%{transform:scale(.88);opacity:.35}55%{transform:scale(1.035);opacity:1}100%{transform:scale(1)}}
+        @keyframes squishPulse{0%,100%{transform:scale(1)}30%{transform:scale(1.09,.9)}60%{transform:scale(.95,1.06)}82%{transform:scale(1.012,.988)}}
+        @keyframes jiggleWiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(1.6deg) scaleX(1.012)}75%{transform:rotate(-1.6deg) scaleX(.988)}}
+        @keyframes orbitSpin{0%{transform:rotate(0deg)}to{transform:rotate(360deg);animation-timing-function:cubic-bezier(.2,1,.3,1)}}@keyframes orbitPulse{0%,100%{opacity:.65;transform:scale(.92)}50%{opacity:1;transform:scale(1.06)}}@keyframes trailShimmer{0%,100%{opacity:.38}50%{opacity:.85}}@keyframes blink{0%,91%,96%,100%{transform:scaleY(1)}93%{transform:scaleY(.12)}}@keyframes pop{0%,100%{opacity:.35;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}@keyframes ripple{0%{opacity:.55;transform:scale(.8)}100%{opacity:0;transform:scale(1.25)}}@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}@keyframes zzz{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+        .rig,.rig-state{transform-box:fill-box;transform-origin:center}.rig{animation-duration:${idleSeconds}s;animation-timing-function:ease-in-out;animation-iteration-count:infinite}
+        .rig.state-idle{animation-name:${cfg.wobbleEnabled?'idleFloat':'none'}}.rig.state-thinking{animation-name:thinkingFloat}.rig.state-working{animation-name:workingBounce}.rig.state-listening{animation-name:idleFloat}.rig.state-speaking{animation-name:idleFloat}.rig.state-waiting{animation-name:waitingBreath}.rig.state-done{animation-name:doneHop;animation-duration:.9s;animation-timing-function:cubic-bezier(.34,1.35,.54,1)}.rig.state-blocked{animation-name:blockedShake;animation-duration:.65s;animation-timing-function:ease-in-out}.rig.state-celebrate{animation-name:celebrateHop;animation-duration:1s;animation-timing-function:cubic-bezier(.3,1.2,.5,1)}.rig.state-orbit{animation-name:idleFloat}
+        .eye{transform-box:fill-box;transform-origin:center;${cfg.blinkEnabled&&state==='idle'?'animation:blink 5.6s ease-in-out infinite;':''}}
+        .body-shape{transform-box:fill-box;transform-origin:center;${cfg.breatheEnabled&&state==='idle'?'animation:breathing 4.6s ease-in-out infinite;':''}}
+        .thinking-dots circle{animation:pop 1s infinite}.thinking-dots circle:nth-child(2){animation-delay:.16s}.thinking-dots circle:nth-child(3){animation-delay:.32s}
+        .orbit-group{transform-box:fill-box;transform-origin:center;animation:orbitSpin var(--orbit-speed,9s) linear infinite}.orbit-satellite{transform-box:fill-box;transform-origin:center;animation:orbitPulse 2.6s ease-in-out infinite}.orbit-sparkle{transform-box:fill-box;transform-origin:center;animation:orbitPulse 3.2s ease-in-out infinite reverse}.orbit-trail{animation:trailShimmer 2.8s ease-in-out infinite}.ripples ellipse{transform-box:fill-box;transform-origin:center;animation:ripple 2s ease-out infinite}.ripples ellipse:nth-child(2){animation-delay:1s}.zzz text{animation:zzz 1.4s ease-in-out infinite}.zzz text:nth-child(2){animation-delay:.5s}.confetti{animation:pulse 1.2s ease-in-out infinite}
+        @media(prefers-reduced-motion:reduce){.rig,.rig-state,.eye,.thinking-dots circle,.orbit-group,.orbit-satellite,.orbit-sparkle,.orbit-trail,.ripples ellipse,.zzz text,.confetti,.body-shape{animation:none!important}}
+        ${animOff}
+      </style>
+      ${bg}<ellipse cx="50" cy="111" rx="27" ry="4.2" fill="#080611" opacity=".16"/>
+      <g class="rig-state"${pop&&!staticFrame?` style="animation:statePop .45s cubic-bezier(.22,1,.36,1)"`:''}><g class="rig state-${escapeHtml(state)}" transform="${rigTransform}">${layers}</g></g>
+    </svg>`;
+    config=old;
+    return svg;
+  }
+  function renderAvatar(pop=false){
+    const slot=$('#avatarSlot');if(!slot||!config)return;
+    slot.innerHTML=svgMarkup(config,{size:512,includeBackground:false,pop});
+    slot.style.setProperty('--avatar-zoom',String(currentZoom));
+    slot.style.setProperty('--avatar-dx',`${Number(config.stageOffsetX)||0}px`);
+    slot.style.setProperty('--avatar-dy',`${Number(config.stageOffsetY)||0}px`);
+    slot.title='Drag to move your Dot on the stage';
+    const root=$('#stageBackdrop');root.classList.toggle('grid-mode',config.stageMode==='grid');root.classList.toggle('plain-mode',config.stageMode==='plain');
+    $$('.mock-avatar').forEach(el=>{el.style.background=`radial-gradient(circle at 30% 25%,${config.secondary},${config.primary} 70%)`;});
+    updateIdentity();
+  }
+  function updateSliderOutputs(){
+    $$('[data-output]').forEach(el=>{const key=el.dataset.output;let val=config[key];if(key.startsWith('accessory')){const a=getSelectedAccessory();const prop=key.replace('accessory','').toLowerCase();val=a?.[prop]??'';}el.textContent=typeof val==='number'?`${Math.round(val*10)/10}${el.dataset.unit||''}`:String(val??'');});
+  }
+
+  function range(label,key,min,max,value,step=1,unit='',opts={}){
+    return `<div class="control-row"><label class="control-label" for="bind-${key}"><span>${label}</span><output data-output="${key}" data-unit="${unit}">${value}${unit}</output></label><input id="bind-${key}" class="range-control" type="range" min="${min}" max="${max}" step="${step}" value="${value}" data-bind="${key}" ${opts.disabled?'disabled':''}/></div>`;
+  }
+  function select(label,key,options,value){return `<div class="control-row"><label class="control-label" for="bind-${key}"><span>${label}</span></label><select class="select-control" id="bind-${key}" data-bind="${key}">${options.map(o=>{const v=typeof o==='string'?o:o[0],l=typeof o==='string'?o:o[1];return `<option value="${escapeHtml(v)}" ${v===value?'selected':''}>${escapeHtml(l)}</option>`;}).join('')}</select></div>`;}
+  function colorField(label,key,value){return `<div class="control-row"><label class="control-label" for="bind-${key}"><span>${label}</span><output data-output="${key}">${value}</output></label><input id="bind-${key}" class="color-control" type="color" value="${safeColor(value,'#b49ef2')}" data-bind="${key}" aria-label="${label}"/></div>`;}
+  function toggle(label,key,value,detail=''){return `<div class="toggle-row"><span>${label}${detail?`<small class="toggle-detail">${detail}</small>`:''}</span><button class="toggle ${value?'on':''}" role="switch" aria-checked="${!!value}" data-toggle="${key}" aria-label="${label}"><i></i></button></div>`;}
+  function shapeIcon(id,color='#c4afff'){
+    const p=PATHS[id]||PATHS.orb;return `<svg class="shape-icon" viewBox="0 0 100 130" aria-hidden="true"><path d="${p}" fill="${color}" opacity=".9"/><circle cx="41" cy="62" r="3" fill="#2a2339"/><circle cx="59" cy="62" r="3" fill="#2a2339"/></svg>`;
+  }
+  function renderShapePanel(){
+    const categories=['All','Blobs','Cosmic','Nature','Creatures'];const list=SHAPES.filter(s=>(selectedCategory==='All'||s.category===selectedCategory)&&s.label.toLowerCase().includes(shapeSearch.toLowerCase()));
+    return `<div class="panel-section"><div class="section-head"><span class="section-title">Choose a silhouette</span><span class="section-note">${SHAPES.length} shapes</span></div><p class="panel-copy">Start with a shape, then fine-tune its proportions.</p><input class="text-control shape-search" id="shapeSearch" placeholder="Search shapes…" value="${escapeHtml(shapeSearch)}" aria-label="Search shapes"/><div class="category-chip-row">${categories.map(c=>`<button class="category-chip ${selectedCategory===c?'active':''}" data-category="${c}">${c}</button>`).join('')}</div><div class="shape-grid">${list.map(s=>`<button class="shape-card ${config.shape===s.id?'active':''}" data-shape="${s.id}" aria-label="Choose ${s.label}" title="${s.label}">${shapeIcon(s.id,config.primary)}<span>${s.label}</span></button>`).join('')}</div></div><div class="divider"></div><div class="panel-section"><div class="section-head"><span class="section-title">Proportions</span><span class="section-note">Live</span></div>${range('Width','shapeWidth',.7,1.35,config.shapeWidth,.01,'×')}${range('Height','shapeHeight',.7,1.35,config.shapeHeight,.01,'×')}${range('Softness','roundness',0,100,config.roundness,1,'%')}${range('Asymmetry','asymmetry',0,100,config.asymmetry,1,'%')}${range('Tilt','tilt',-15,15,config.tilt,1,'°')}<div class="helper-tip">Different silhouettes have shape-specific details. Add optional ears, tails, fins, or other soft features from the Extras tab.</div></div>`;
+  }
+  function renderFacePanel(){
+    return `<div class="panel-section"><div class="section-head"><span class="section-title">The face</span><span class="section-note">Make it yours</span></div>${select('Eye style','eyeStyle',EYE_STYLES,config.eyeStyle)}<div class="field-grid"><div>${range('Eye size','eyeSize',3,14,config.eyeSize,.2,'')}</div><div>${range('Eye spacing','eyeSpacing',12,40,config.eyeSpacing,1,'')}</div></div>${range('Eye height','eyeY',44,82,config.eyeY,1,'')}${range('Eye tilt','eyeTilt',-15,15,config.eyeTilt,1,'°')}${toggle('Link both eyes','linkEyes',config.linkEyes,'Turn off to set a different right eye')}${!config.linkEyes?select('Right eye','rightEyeStyle',EYE_STYLES,config.rightEyeStyle):''}${select('Expression preset','expression',EXPRESSIONS,config.expression)}${select('Mouth','mouth',MOUTHS,config.mouth)}${range('Mouth position','mouthY',68,96,config.mouthY,1,'')}${range('Mouth size','mouthSize',.5,1.7,config.mouthSize,.05,'×')}${select('Brows','browStyle',['None','Soft arc','Raised','Sleepy','Focused'],config.browStyle)}${select('Nose detail','noseStyle',['None','Tiny dot','Soft triangle','Heart'],config.noseStyle)}</div><div class="divider"></div><div class="panel-section"><div class="section-head"><span class="section-title">Cheeks & details</span></div>${toggle('Soft blush','blush',config.blush)}${range('Blush opacity','blushOpacity',0,100,config.blushOpacity,1,'%')}${colorField('Blush color','blushColor',config.blushColor)}${toggle('Add freckles','freckles',config.freckles)}${toggle('Eye highlights','eyeHighlight',config.eyeHighlight)}</div>`;
+  }
+  function renderStylePanel(){
+    return `<div class="panel-section"><div class="section-head"><span class="section-title">Color stories</span><span class="section-note">${PALETTES.length} palettes</span></div><div class="preset-palette">${PALETTES.map(p=>`<button class="palette-card ${config.primary===p.primary?'active':''}" data-palette="${p.name}" title="${p.name}"><span class="palette-dots"><i style="background:${p.primary}"></i><i style="background:${p.secondary}"></i><i style="background:${p.accent}"></i></span><span>${p.name}</span></button>`).join('')}</div></div><div class="divider"></div><div class="panel-section"><div class="section-head"><span class="section-title">Custom colors</span></div>${colorField('Main body','primary',config.primary)}${colorField('Highlight / patch','secondary',config.secondary)}${colorField('Accent','accent',config.accent)}${colorField('Eye color','eyeColor',config.eyeColor)}${colorField('Outline','outline',config.outline)}</div><div class="divider"></div><div class="panel-section"><div class="section-head"><span class="section-title">Finish</span></div>${select('Material','material',['Plush/Fuzzy','Fuzzy Felt','Matte Soft','Smooth Gel','Glossy Bubble','Pearly','Soft Holographic'],config.material)}${range('Texture amount','texture',0,100,config.texture,1,'%')}${range('Shine','shine',0,70,config.shine,1,'%')}${range('Glow','glow',0,100,config.glow,1,'%')}${select('Pattern','pattern',['None','Spots','Polka dots','Stripes','Freckles','Stars','Swirls','Hearts'],config.pattern)}${range('Pattern opacity','patternOpacity',0,70,config.patternOpacity,1,'%')}</div><div class="divider"></div><div class="panel-section"><div class="section-head"><span class="section-title">Export backdrop</span></div>${select('Background','backgroundMode',['Transparent','Solid','Soft spotlight','Dot grid'],config.backgroundMode)}${colorField('Background color','backgroundColor',config.backgroundColor)}</div>`;
+  }
+  function renderHatsPanel(){
+    return `<div class="panel-section"><div class="section-head"><span class="section-title">Find the perfect hat</span><span class="section-note">${HATS.length-1} styles</span></div><p class="panel-copy">Every hat can be resized, tilted, recolored, and repositioned.</p><div class="hat-grid">${HATS.map(h=>`<button class="hat-card ${config.hat===h.id?'active':''}" data-hat="${h.id}" aria-label="Choose ${h.label}" title="${h.label}"><span>${h.icon}</span>${h.label}</button>`).join('')}</div></div><div class="divider"></div>${config.hat==='none'?'<div class="helper-tip">Choose any hat above to unlock its fit and color controls.</div>':`<div class="panel-section"><div class="section-head"><span class="section-title">Hat details</span><button class="text-button" data-action="fit-hat">Fit to shape</button></div>${colorField('Main hat color','hatColor',config.hatColor)}${colorField('Trim / band color','hatTrim',config.hatTrim)}${range('Hat size','hatScale',.55,1.65,config.hatScale,.01,'×')}${range('Tilt','hatTilt',-35,35,config.hatTilt,1,'°')}${range('Horizontal position','hatX',-24,24,config.hatX,1,'')}${range('Vertical position','hatY',-20,25,config.hatY,1,'')}</div>`}<div class="divider"></div><div class="helper-tip">Tip: add glasses or another accessory in the Extras tab, then fine-tune the layer order.</div>`;
+  }
+  function getSelectedAccessory(){return (config.accessories||[]).find(a=>a.id===config.selectedAccessoryId)||config.accessories?.[0]||null;}
+  function renderExtrasPanel(){
+    const a=getSelectedAccessory();
+    const accessoriesHtml=(config.accessories||[]).map(item=>{const meta=ACCESSORIES.find(x=>x.id===item.type)||ACCESSORIES[0];return `<div class="accessory-item ${a?.id===item.id?'selected':''}" data-select-accessory="${item.id}"><span class="acc-icon">${meta.icon}</span><strong>${meta.label}</strong><button title="Move up" data-acc-move="up" data-id="${item.id}">↑</button><button title="Move down" data-acc-move="down" data-id="${item.id}">↓</button><button title="Remove" data-acc-delete="${item.id}">×</button></div>`;}).join('')||'<p class="panel-copy">No extras yet. Add a little detail to give this Dot its signature.</p>';
+    const layers=['body','face','blush','glasses','hat','accessories','effects'];
+    const layerLabels={body:'Body & pattern',face:'Face features',blush:'Blush & marks',glasses:'Eyewear',hat:'Hat / headwear',accessories:'Accessories',effects:'Mood effects'};
+    return `<div class="panel-section"><div class="section-head"><span class="section-title">Eyewear</span></div>${select('Frame style','glasses',GLASSES.map(g=>[g.id,g.label]),config.glasses)}${config.glasses!=='None'&&config.glasses!=='none'?`${colorField('Frame color','glassesColor',config.glassesColor)}${colorField('Lens tint','lensTint',config.lensTint)}${range('Glasses size','glassesScale',.5,1.8,config.glassesScale,.01,'×')}${range('Glasses tilt','glassesTilt',-20,20,config.glassesTilt,1,'°')}${range('Horizontal position','glassesX',-16,16,config.glassesX,1,'')}${range('Vertical position','glassesY',-15,18,config.glassesY,1,'')}`:''}</div><div class="divider"></div><div class="panel-section"><div class="section-head"><span class="section-title">Add little extras</span><span class="section-note">${config.accessories.length} added</span></div><div class="add-accessory-row"><select class="select-control" id="accessoryPicker">${ACCESSORIES.map(x=>`<option value="${x.id}">${x.label}</option>`).join('')}</select><button class="small-action" data-action="add-accessory">＋ Add</button></div><div class="accessory-list" style="margin-top:8px">${accessoriesHtml}</div>${a?`<div class="divider"></div><div class="section-head"><span class="section-title">Selected: ${escapeHtml((ACCESSORIES.find(x=>x.id===a.type)||{}).label||'Accessory')}</span></div>${colorField('Accessory color','accessoryColor',a.color)}${range('Size','accessoryScale',.3,2.3,a.scale,.01,'×')}${range('Horizontal','accessoryX',-44,44,a.x,1,'')}${range('Vertical','accessoryY',-44,44,a.y,1,'')}${range('Rotation','accessoryRotation',-180,180,a.rotation,1,'°')}${range('Opacity','accessoryOpacity',0,100,a.opacity,1,'%')}${toggle('Show selected accessory','accessoryVisible',a.visible)}${toggle('Lock selected accessory','accessoryLocked',a.locked)}`:''}</div><div class="divider"></div><div class="panel-section"><div class="section-head"><span class="section-title">Layer manager</span><span class="section-note">Move front/back</span></div><div class="layer-list">${(config.layerOrder||layers).map((layer,i)=>`<div class="layer-item"><span class="layer-name">${layerLabels[layer]||layer}</span><button title="Move up" data-layer-move="up" data-layer="${layer}">↑</button><button title="Move down" data-layer-move="down" data-layer="${layer}">↓</button><button title="Toggle visibility" data-layer-toggle="${layer}">${config.layerVisibility?.[layer]===false?'◌':'◉'}</button></div>`).join('')}</div></div><div class="divider"></div><div class="panel-section"><div class="section-head"><span class="section-title">Dot identity</span></div><div class="profile-fields"><label class="control-label">Name</label><input class="text-control" data-bind="name" value="${escapeHtml(config.name)}" maxlength="28"/><label class="control-label">Handle</label><input class="text-control" data-bind="handle" value="${escapeHtml(config.handle)}" maxlength="48"/><label class="control-label">Short bio</label><input class="text-control" data-bind="bio" value="${escapeHtml(config.bio)}" maxlength="80"/><label class="control-label">Role label</label><input class="text-control" data-bind="roleLabel" value="${escapeHtml(config.roleLabel)}" maxlength="32"/><div class="small-tag-row">${['Curious','Kind','Dreamy','Bold','Playful','Calm'].map(t=>`<button class="tag-chip ${(config.moodTags||[]).includes(t)?'active':''}" data-tag="${t}">${t}</button>`).join('')}</div></div></div>`;
+  }
+  function renderMotionPanel(){
+    return `<div class="panel-section"><div class="section-head"><span class="section-title">Preview a state</span><span class="section-note">Visual only</span></div><p class="panel-copy">These are character animations, not real agent activity.</p><div class="state-control-grid">${STATES.map(s=>`<button class="state-control ${config.state===s[0]?'active':''}" data-state="${s[0]}"><span>${s[2]}</span>${s[1]}</button>`).join('')}</div></div><div class="divider"></div><div class="panel-section"><div class="section-head"><span class="section-title">Idle motion</span></div>${toggle('Gentle wobble','wobbleEnabled',config.wobbleEnabled)}${range('Wobble amount','wobbleAmount',0,100,config.wobbleAmount,1,'%')}${range('Wobble speed','wobbleSpeed',10,100,config.wobbleSpeed,1,'%')}${range('Animation speed','animationSpeed',.5,2,config.animationSpeed,.05,'×')}${toggle('Blink naturally','blinkEnabled',config.blinkEnabled)}${toggle('Breathing pulse','breatheEnabled',config.breatheEnabled)}${toggle('Follow cursor','followCursor',config.followCursor,'Pupils subtly follow the pointer')}</div><div class="divider"></div><div class="panel-section"><div class="section-head"><span class="section-title">Motion playground</span><span class="section-note">Try a move</span></div><div class="state-control-grid">${[['blink','Blink','◡'],['bounce','Bounce','↟'],['squish','Squish','↔'],['jiggle','Jiggle','〰'],['orbit','Orbit','◌'],['pop','Pop','✦']].map(x=>`<button class="state-control" data-animation="${x[0]}"><span>${x[2]}</span>${x[1]}</button>`).join('')}</div><div class="divider"></div><button class="small-action" data-action="reduce-motion">${document.body.classList.contains('reduce-motion')?'Enable motion':'Reduce motion'}</button></div><div class="helper-tip">DotStudio only previews the look of these states. It does not connect to or control an AI agent.</div>`;
+  }
+  function renderPanel(){
+    const el=$('#panelContent');if(!el)return;
+    const renderers={shape:renderShapePanel,face:renderFacePanel,style:renderStylePanel,hats:renderHatsPanel,extras:renderExtrasPanel,motion:renderMotionPanel};
+    el.innerHTML=(renderers[selectedTab]||renderShapePanel)();
+    $$('.editor-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===selectedTab));
+    updateSliderOutputs();
+  }
+
+  function updateDot(patch,{rememberChange=true,panel=false,list=true}={}){
+    if(rememberChange)remember();
+    config={...config,...patch};
+    if(config.name&&patch.name!==undefined&&patch.handle===undefined)config.handle=`@${slug(config.name)}-buddy`;
+    config.updatedAt=Date.now();
+    persist();renderAvatar();updateContext();updateSliderOutputs();if(panel)renderPanel();if(list)renderDotList();
+  }
+  function setField(key,value){
+    if(key.startsWith('accessory')){
+      const a=getSelectedAccessory();if(!a)return;const prop=key.replace('accessory','');const map={Color:'color',Scale:'scale',X:'x',Y:'y',Rotation:'rotation',Opacity:'opacity',Visible:'visible',Locked:'locked'};const field=map[prop];if(!field)return;
+      const updated=(config.accessories||[]).map(x=>x.id===a.id?{...x,[field]:value}:x);updateDot({accessories:updated},{rememberChange:false,list:false});return;
+    }
+    updateDot({[key]:value},{rememberChange:false,list:key==='name'||key==='primary'});
+  }
+
+  function renderMoodGrid(){
+    $('#moodGrid').innerHTML=STATES.map(s=>`<button class="mood-button ${config.state===s[0]?'active':''}" data-state="${s[0]}" aria-label="Preview ${s[1]} state"><span class="mood-icon">${s[2]}</span><span class="mood-name">${s[1]}</span></button>`).join('');
+  }
+  function updateMoodButtons(){
+    $$('.mood-button,.state-control').forEach(b=>{if(b.dataset.state)b.classList.toggle('active',b.dataset.state===config.state);});
+    $('#stateLabel').textContent=(STATES.find(s=>s[0]===config.state)?.[1]||'IDLE').toUpperCase();
+  }
+  function renderAll(){renderPanel();renderMoodGrid();renderAvatar();updateIdentity();updateContext();renderDotList();updateUndoButtons();}
+
+  function setState(state){
+    if(!STATES.some(s=>s[0]===state))return;
+    // Reset drag offsets for float-based states so avatar doesn't keep drag position
+    if(['thinking','idle','listening','speaking'].includes(state)){
+      config.stageOffsetX = 0;
+      config.stageOffsetY = 0;
+    }
+    remember();config={...config,state};persist();renderAvatar(true);updateMoodButtons();renderPanel();
+  }
+  function applyExpression(exp){
+    const map={Friendly:{eyeStyle:'Capsule',mouth:'Tiny smile'},Curious:{eyeStyle:'Wide pupil',mouth:'Tiny smile'},Happy:{eyeStyle:'Half-moon',mouth:'Grin'},Calm:{eyeStyle:'Dot',mouth:'Tiny smile'},Sleepy:{eyeStyle:'Sleepy lids',mouth:'None'},Surprised:{eyeStyle:'Surprised',mouth:'Open O'},Playful:{eyeStyle:'Wink',mouth:'Cat W'},Shy:{eyeStyle:'Capsule',mouth:'Tiny smile',blush:true},Confident:{eyeStyle:'Oval',mouth:'Grin'},Mischievous:{eyeStyle:'Wink',mouth:'Grin'},Loving:{eyeStyle:'Heart',mouth:'Tiny smile'},Focused:{eyeStyle:'Capsule',mouth:'Flat line'}};
+    remember();config={...config,expression:exp,...(map[exp]||{})};persist();renderAvatar();renderPanel();updateIdentity();
+  }
+
+  const PRESET_DATA=[
+    ['Pip','cloud','#B49EF2','#DFD3FF','Capsule','beret','sparkle','Curious'],['Nori','bean','#78D6C0','#C8F3DD','Dot','beanie','sprout','Calm'],['Miso','mochi','#F0A093','#FFD8C9','Sleepy lids','none','flower','Sleepy'],['Bloop','octopus','#68B8E8','#C5ECFF','Wide pupil','cap','bubble','Playful'],['Lumi','star','#F1CB65','#FFF0B6','Sparkle','crown','star','Happy'],['Tavi','frog','#82C976','#D5F0B6','Wide pupil','bucket','bowtie','Friendly'],['Mallow','pillow','#E88DB5','#FFD4E4','Half-moon','beanie','heart','Loving'],['Orbit','moon','#8882D4','#D7CFFF','Dot','wizard','halo','Curious'],['Pogo','bunny','#F3A875','#FFE0B0','Wink','party','sparkle','Playful'],['Fenn','leaf','#78B68C','#D0EBC8','Oval','flowers','leaf','Calm'],['Kiko','ghost','#C1B9E7','#F2EFFF','Surprised','tophat','bow','Surprised'],['Sola','sun','#F2B754','#FFE5A5','Half-moon','sunhat','flower','Happy'],['Dew','teardrop','#72C8C4','#C7F2EC','Dot','none','bubble','Calm'],['Puff','cloud','#E994B8','#F8D3E2','Heart','beret','sparkle','Loving'],['Mochi','mushroom','#C78A68','#F0D1AE','Capsule','beanie','sprout','Friendly'],['Fizzy','splat','#86B7E5','#D5EAFF','Spiral','party','star','Playful'],['Tundra','snowball','#AFC8DA','#E8F3FB','Sleepy lids','earmuffs','scarf','Sleepy'],['Mira','crescent','#B486C7','#E8CDED','Glassy','wizard','halo','Curious'],['Peb','pebble','#9D9DAB','#E0E0E8','Dot','cap','badge','Focused'],['Berry','berry','#CF6F9A','#F7C4D7','Oval','flowers','heart','Happy'],['Clover','turtle','#7ABF9C','#C9E8D0','Capsule','bucket','leaf','Friendly'],['Wink','cat','#E7B17B','#FFE5C6','Wink','beret','bow','Mischievous'],['Maru','whale','#75A9D6','#C1E2F5','Half-moon','none','bubble','Calm'],['Ember','dragon','#E37C64','#FFC5A3','Star','tophat','sparkle','Confident']
+  ];
+  function presetConfig(data){const [name,shape,primary,secondary,eyeStyle,hat,acc,expression]=data;const pal={primary,secondary,accent:hexToLight(primary,.25)};const c=newConfig(name,shape,pal);c.eyeStyle=eyeStyle;c.expression=expression;c.hat=hat;c.accessories=acc==='none'?[]:[makeAccessory(acc,pal.accent)];const mouthBy={Happy:'Grin',Playful:'Cat W',Sleepy:'None',Surprised:'Open O',Focused:'Flat line'};c.mouth=mouthBy[expression]||'Tiny smile';return c;}
+
+  function createNewDot(){
+    const name=`New Dot ${dots.length+1}`;const palette=PALETTES[Math.floor(Math.random()*PALETTES.length)];const fresh=newConfig(name,'orb',palette);fresh.hat='none';fresh.accessories=[];remember();dots.unshift(fresh);config=clone(fresh);activeId=fresh.id;persist();renderAll();showToast('A fresh canvas is ready');
+  }
+  function selectDot(id){const found=dots.find(d=>d.id===id);if(!found)return;activeId=id;config=clone(found);history=[];redoStack=[];renderAll();}
+  function duplicateDot(){const d=clone(config);d.id=uid();d.name=`${config.name} copy`;d.handle=`@${slug(d.name)}-buddy`;d.updatedAt=Date.now();remember();dots.unshift(d);config=clone(d);activeId=d.id;persist();renderAll();showToast('Dot duplicated');}
+  function deleteDot(){if(dots.length<=1){config=newConfig('Pip','cloud',PALETTES[2]);config.id=activeId;dots=[clone(config)];persist();renderAll();showToast('Reset to your starter Dot');return;}dots=dots.filter(d=>d.id!==activeId);config=clone(dots[0]);activeId=config.id;history=[];redoStack=[];persist();renderAll();showToast('Dot removed');}
+  function saveDot(){persist();showToast(`${config.name} saved on this device`);}
+  function randomize(scope='all'){
+    const random=(arr)=>arr[Math.floor(Math.random()*arr.length)];remember();
+    const p=random(PALETTES);const patch={};const accType=random(ACCESSORIES).id;
+    if(scope==='all'||scope==='shape')patch.shape=random(SHAPES).id;
+    if(scope==='all'||scope==='color'){patch.primary=p.primary;patch.secondary=p.secondary;patch.accent=p.accent;}
+    if(scope==='all'||scope==='face'){patch.eyeStyle=random(EYE_STYLES);patch.expression=random(EXPRESSIONS);patch.mouth=random(MOUTHS);}
+    if(scope==='all'||scope==='hats')patch.hat=random(HATS).id;
+    if(scope==='all'||scope==='accessories')patch.accessories=[{...makeAccessory(accType,p.accent),scale:.85+Math.random()*.4}];
+    config={...config,...patch};config.updatedAt=Date.now();persist();renderAll();showToast('A fresh look, just for you');
+  }
+
+  function openModal(content){modalReturnFocus=document.activeElement;$('#modalContent').innerHTML=content;$('#modalBackdrop').classList.add('open');$('#modalBackdrop').setAttribute('aria-hidden','false');$('#modalClose').focus();}
+  function closeModal(){ $('#modalBackdrop').classList.remove('open');$('#modalBackdrop').setAttribute('aria-hidden','true');if(modalReturnFocus?.focus)modalReturnFocus.focus(); }
+  function openGallery(){
+    const cards=PRESET_DATA.map(d=>{const p=presetConfig(d);return `<button class="modal-preset" data-preset="${escapeHtml(d[0])}"><div class="preset-preview"><span class="preset-blob" style="background:radial-gradient(circle at 30% 25%,${p.secondary},${p.primary} 70%)"></span></div><strong>${escapeHtml(d[0])}</strong><small>${escapeHtml(shapeLabel(d[1]))} · ${escapeHtml(d[7])}</small></button>`;}).join('');
+    openModal(`<h2 class="modal-title" id="modalTitle">Starter Dots</h2><p class="modal-subtitle">Pick an original character, then change anything you like.</p><div class="modal-grid">${cards}</div><div class="modal-actions"><button class="secondary-button" data-action="new-dot">＋ Start blank</button></div>`);
+  }
+  function openCollection(){
+    const cards=dots.map(d=>`<button class="modal-preset" data-dot-id="${escapeHtml(d.id)}"><div class="preset-preview"><span class="preset-blob" style="background:radial-gradient(circle at 30% 25%,${safeColor(d.secondary,'#ddd')},${safeColor(d.primary,'#aaa')} 70%)"></span></div><strong>${escapeHtml(d.name)}</strong><small>${escapeHtml(shapeLabel(d.shape))} · ${escapeHtml(d.handle||'')}</small></button>`).join('');
+    openModal(`<h2 class="modal-title" id="modalTitle">My Dots</h2><p class="modal-subtitle">Every character is saved locally on this device. Select one to keep editing.</p><div class="modal-grid">${cards}</div><div class="modal-actions"><button class="secondary-button" data-action="new-dot">＋ Create new Dot</button><button class="quiet-button" data-action="duplicate-dot">Duplicate current</button><button class="quiet-button" data-action="delete-dot">Delete current</button></div>`);
+  }
+  function openShare(){const url=makeShareUrl();openModal(`<h2 class="modal-title" id="modalTitle">Share your Dot</h2><p class="modal-subtitle">This link contains the design settings, not a photo. Anyone with the link can view the same avatar settings.</p><div class="share-field"><input id="shareUrl" readonly value="${escapeHtml(url)}"/><button class="primary-button" data-action="copy-share">Copy link</button></div><div class="divider"></div><div class="helper-tip">Your Dot stays saved on your device. Sharing only encodes the current character design in the URL.</div>`);}
+  function openExport(){openModal(`<h2 class="modal-title" id="modalTitle">Export ${escapeHtml(config.name)}</h2><p class="modal-subtitle">Take your little companion anywhere. Choose a format.</p><div class="export-options"><button class="export-card" data-action="export-png"><span>▧</span><strong>PNG export</strong><small>Transparent or styled backdrop</small></button><button class="export-card" data-action="export-svg"><span>◇</span><strong>Clean SVG</strong><small>Sharp at any size</small></button><button class="export-card" data-action="export-json"><span>{ }</span><strong>Dot spec JSON</strong><small>Editable design config</small></button><button class="export-card" data-action="export-stickers"><span>▦</span><strong>Sticker state pack</strong><small>ZIP of 10 transparent PNGs</small></button><button class="export-card" data-action="export-webm"><span>▶</span><strong>Animated WebM</strong><small>3-second preview loop</small></button><button class="export-card" data-action="copy-react"><span>⌘</span><strong>Copy React component</strong><small>Embed this Dot in a project</small></button></div><div class="divider"></div><div class="modal-actions"><button class="secondary-button" data-action="copy-json">Copy JSON</button><button class="secondary-button" data-action="copy-prompt">Copy image prompt</button></div>`);}
+  function openSpec(){
+    const items=[['Name',config.name],['Handle',config.handle],['Shape',shapeLabel(config.shape)],['Body color',config.primary],['Material',config.material],['Eyes',`${config.eyeStyle} · size ${config.eyeSize}`],['Expression',config.expression],['Mouth',config.mouth],['Hat',HATS.find(h=>h.id===config.hat)?.label||'None'],['Glasses',GLASSES.find(g=>g.id.toLowerCase()===String(config.glasses).toLowerCase())?.label||'None'],['Accessories',(config.accessories||[]).map(a=>ACCESSORIES.find(x=>x.id===a.type)?.label).join(', ')||'None'],['Preview state',STATES.find(s=>s[0]===config.state)?.[1]||'Idle']];
+    const spec=items.map(([k,v])=>`<div class="spec-item"><small>${escapeHtml(k)}</small><strong>${escapeHtml(v)}</strong></div>`).join('');
+    openModal(`<h2 class="modal-title" id="modalTitle">Dot specification</h2><p class="modal-subtitle">A quick, readable summary of ${escapeHtml(config.name)}’s design.</p><div class="spec-grid">${spec}</div><div class="divider"></div><div class="modal-actions"><button class="secondary-button" data-action="copy-json">Copy full JSON</button><button class="primary-button" data-action="export-json">Download JSON</button></div>`);
+  }
+  function makeShareUrl(){const json=JSON.stringify(config);const b64=btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');return `${location.origin}${location.pathname}#d=${b64}`;}
+  function readHashConfig(){try{const match=location.hash.match(/(?:^#|&)d=([^&]+)/);if(!match)return null;let b=match[1].replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';return JSON.parse(decodeURIComponent(escape(atob(b))));}catch(e){console.warn('Invalid shared Dot link',e);return null;}}
+  function downloadBlob(blob,name){const a=document.createElement('a');const url=URL.createObjectURL(blob);a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);}
+  function downloadSVG(){const svg=svgMarkup(config,{size:1024,includeBackground:true,staticFrame:true});downloadBlob(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}),`${slug(config.name)}.svg`);showToast('SVG downloaded');}
+  function rasterizeSvg(svg,size=512,cfg=config){return new Promise((resolve,reject)=>{const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});const url=URL.createObjectURL(blob);const image=new Image();image.onload=()=>{const canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;const ctx=canvas.getContext('2d');const mode=cfg.backgroundMode||'Transparent';if(mode==='Solid'){ctx.fillStyle=safeColor(cfg.backgroundColor,'#ffffff');ctx.fillRect(0,0,size,size);}else if(mode==='Soft spotlight'){ctx.fillStyle=safeColor(cfg.backgroundColor,'#1b1b2b');ctx.fillRect(0,0,size,size);const g=ctx.createRadialGradient(size*.5,size*.45,size*.02,size*.5,size*.48,size*.68);g.addColorStop(0,safeColor(cfg.secondary,'#dfd3ff'));g.addColorStop(1,safeColor(cfg.backgroundColor,'#1b1b2b'));ctx.fillStyle=g;ctx.fillRect(0,0,size,size);}else if(mode==='Dot grid'){ctx.fillStyle=safeColor(cfg.backgroundColor,'#1b1b2b');ctx.fillRect(0,0,size,size);ctx.fillStyle=alphaColor(cfg.secondary||'#dfd3ff',.44);for(let y=12;y<size;y+=22)for(let x=12;x<size;x+=22){ctx.beginPath();ctx.arc(x,y,1.2,0,Math.PI*2);ctx.fill();}}ctx.drawImage(image,0,0,size,size);URL.revokeObjectURL(url);canvas.toBlob(b=>b?resolve(b):reject(new Error('PNG encoding failed')),'image/png');};image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Could not render SVG'));};image.src=url;});}
+  async function downloadPNG(size=1024,cfg=config){try{const svg=svgMarkup(cfg,{size,includeBackground:false,staticFrame:true});const blob=await rasterizeSvg(svg,size,cfg);downloadBlob(blob,`${slug(cfg.name)}-${size}.png`);showToast(`${size}px PNG downloaded`);}catch(e){console.error(e);showToast('PNG export failed in this browser');}}
+  function downloadJSON(){downloadBlob(new Blob([JSON.stringify(config,null,2)],{type:'application/json'}),`${slug(config.name)}-spec.json`);showToast('Dot spec downloaded');}
+  async function copyText(text){try{await navigator.clipboard.writeText(text);}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}}
+  function copyImagePrompt(){const acc=(config.accessories||[]).map(a=>ACCESSORIES.find(x=>x.id===a.type)?.label).filter(Boolean).join(', ')||'no extra accessories';const hat=HATS.find(h=>h.id===config.hat)?.label||'no hat';const p=`Create an original friendly companion mascot: ${shapeLabel(config.shape)}, ${config.primary} body, ${config.material.toLowerCase()} finish, ${config.eyeStyle.toLowerCase()} eyes, ${config.expression.toLowerCase()} expression, ${config.mouth.toLowerCase()} mouth, ${config.blush?'soft cheek blush':'no blush'}, wearing a ${hat}, with ${acc}. Keep the silhouette simple, rounded, expressive, icon-readable, softly lit, centered, and original. Transparent background, no text, no logos, no watermark.`;return p;}
+  async function copyReact(){const svg=svgMarkup(config,{size:512,includeBackground:false,staticFrame:true});const data='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svg)));const code=`// Generated by DotStudio\nimport React from 'react';\n\nconst avatarSvg = ${JSON.stringify(data)};\n\nexport function DotAvatar({ size = 128, title = ${JSON.stringify(config.name)} }) {\n  return <img src={avatarSvg} width={size} height={size} alt={title} style={{ display: 'block', objectFit: 'contain' }} />;\n}\n`;await copyText(code);showToast('React component copied');}
+
+  function crc32(bytes){let c=~0;for(let i=0;i<bytes.length;i++){c^=bytes[i];for(let k=0;k<8;k++)c=(c>>>1)^(0xEDB88320&-(c&1));}return (~c)>>>0;}
+  function concatBytes(parts){const len=parts.reduce((n,p)=>n+p.length,0);const out=new Uint8Array(len);let offset=0;for(const p of parts){out.set(p,offset);offset+=p.length;}return out;}
+  function zipStore(files){const enc=new TextEncoder(),local=[],central=[];let offset=0;for(const file of files){const name=enc.encode(file.name),data=new Uint8Array(file.data),crc=crc32(data);const lh=new Uint8Array(30+name.length);const lv=new DataView(lh.buffer);lv.setUint32(0,0x04034b50,true);lv.setUint16(4,20,true);lv.setUint16(6,0,true);lv.setUint16(8,0,true);lv.setUint32(14,crc,true);lv.setUint32(18,data.length,true);lv.setUint32(22,data.length,true);lv.setUint16(26,name.length,true);lh.set(name,30);local.push(lh,data);const ch=new Uint8Array(46+name.length);const cv=new DataView(ch.buffer);cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0,true);cv.setUint16(10,0,true);cv.setUint32(16,crc,true);cv.setUint32(20,data.length,true);cv.setUint32(24,data.length,true);cv.setUint16(28,name.length,true);cv.setUint32(42,offset,true);ch.set(name,46);central.push(ch);offset+=lh.length+data.length;}const centralBytes=concatBytes(central);const localBytes=concatBytes(local);const end=new Uint8Array(22);const v=new DataView(end.buffer);v.setUint32(0,0x06054b50,true);v.setUint16(8,files.length,true);v.setUint16(10,files.length,true);v.setUint32(12,centralBytes.length,true);v.setUint32(16,localBytes.length,true);return concatBytes([localBytes,centralBytes,end]);}
+  async function downloadStickerPack(){try{showToast('Preparing sticker pack…');const files=[];for(const s of STATES){const c={...config,state:s[0]};const blob=await rasterizeSvg(svgMarkup(c,{size:512,includeBackground:false,staticFrame:true}),512,{...c,backgroundMode:'Transparent'});files.push({name:`${slug(config.name)}-${s[0]}.png`,data:new Uint8Array(await blob.arrayBuffer())});}const zip=zipStore(files);downloadBlob(new Blob([zip],{type:'application/zip'}),`${slug(config.name)}-stickers.zip`);showToast('Sticker pack downloaded');}catch(e){console.error(e);showToast('Sticker pack export failed');}}
+  async function downloadWebM(){
+    if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){showToast('Animated WebM export is not supported in this browser');return;}
+    const size=512,canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;const ctx=canvas.getContext('2d');const stream=canvas.captureStream(24);let mime='video/webm';if(MediaRecorder.isTypeSupported&&!MediaRecorder.isTypeSupported(mime)){showToast('WebM format is not supported here');return;}
+    const recorder=new MediaRecorder(stream,{mimeType:mime});const chunks=[];recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};const done=new Promise(resolve=>recorder.onstop=resolve);recorder.start();
+    const frames=72;for(let i=0;i<frames;i++){const state=STATES[Math.floor((i/frames)*STATES.length)][0];const svg=svgMarkup({...config,state},{size,includeBackground:false,staticFrame:true});await new Promise(resolve=>{const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));const img=new Image();img.onload=()=>{ctx.clearRect(0,0,size,size);ctx.drawImage(img,0,0,size,size);URL.revokeObjectURL(url);resolve();};img.onerror=()=>{URL.revokeObjectURL(url);resolve();};img.src=url;});await new Promise(r=>setTimeout(r,42));}
+    recorder.stop();await done;stream.getTracks().forEach(t=>t.stop());downloadBlob(new Blob(chunks,{type:mime}),`${slug(config.name)}-states.webm`);showToast('Animated WebM downloaded');
+  }
+  function showExportPngChoices(){openModal(`<h2 class="modal-title" id="modalTitle">Choose PNG size</h2><p class="modal-subtitle">Export ${escapeHtml(config.name)} with a transparent background or the selected backdrop.</p><div class="export-options">${[256,512,1024,2048].map(n=>`<button class="export-card" data-png-size="${n}"><span>▧</span><strong>${n} × ${n}</strong><small>${n===256?'Small icon':n===512?'Profile-ready':n===1024?'High resolution':'Print / large use'}</small></button>`).join('')}</div><div class="divider"></div><div class="toggle-row"><span>Use solid background</span><button class="toggle ${config.backgroundMode==='Solid'?'on':''}" data-toggle="exportBg"><i></i></button></div>`);}
+
+  function getSelectedAccessory(){return (config.accessories||[]).find(a=>a.id===config.selectedAccessoryId)||config.accessories?.[0]||null;}
+  function moveLayer(layer,direction){const arr=[...config.layerOrder];const i=arr.indexOf(layer),j=i+(direction==='up'?1:-1);if(i<0||j<0||j>=arr.length)return;remember();[arr[i],arr[j]]=[arr[j],arr[i]];config={...config,layerOrder:arr};persist();renderAvatar();renderPanel();}
+  function moveAccessory(id,direction){const arr=[...config.accessories];const i=arr.findIndex(a=>a.id===id),j=i+(direction==='up'?1:-1);if(i<0||j<0||j>=arr.length)return;remember();[arr[i],arr[j]]=[arr[j],arr[i]];config={...config,accessories:arr};persist();renderAvatar();renderPanel();}
+
+  document.addEventListener('click',async(e)=>{
+    const tab=e.target.closest('.editor-tab');if(tab){selectedTab=tab.dataset.tab;renderPanel();return;}
+    const category=e.target.closest('[data-category]');if(category){selectedCategory=category.dataset.category;renderPanel();return;}
+    const shape=e.target.closest('[data-shape]');if(shape){remember();config.shape=shape.dataset.shape;persist();renderAvatar();renderPanel();return;}
+    const palette=e.target.closest('[data-palette]');if(palette){const p=PALETTES.find(x=>x.name===palette.dataset.palette);if(p){remember();config={...config,primary:p.primary,secondary:p.secondary,accent:p.accent};persist();renderAvatar();renderPanel();}return;}
+    const hat=e.target.closest('[data-hat]');if(hat){remember();config.hat=hat.dataset.hat;persist();renderAvatar();renderPanel();return;}
+    const state=e.target.closest('[data-state]');if(state){setState(state.dataset.state);return;}
+    const dot=e.target.closest('[data-dot-id]');if(dot){selectDot(dot.dataset.dotId);closeModal();return;}
+    const preset=e.target.closest('[data-preset]');if(preset){const data=PRESET_DATA.find(x=>x[0]===preset.dataset.preset);if(data){const fresh=presetConfig(data);remember();dots.unshift(fresh);config=clone(fresh);activeId=fresh.id;persist();renderAll();closeModal();showToast(`${fresh.name} added to your studio`);}return;}
+    const tag=e.target.closest('[data-tag]');if(tag){remember();const t=tag.dataset.tag;const tags=new Set(config.moodTags||[]);tags.has(t)?tags.delete(t):tags.add(t);config.moodTags=[...tags];persist();renderPanel();return;}
+    const toggleBtn=e.target.closest('[data-toggle]');if(toggleBtn){const key=toggleBtn.dataset.toggle;if(key==='exportBg'){remember();config={...config,backgroundMode:config.backgroundMode==='Solid'?'Transparent':'Solid'};persist();renderAvatar();showExportPngChoices();return;}const keyMap={linkEyes:'linkEyes',blush:'blush',freckles:'freckles',eyeHighlight:'eyeHighlight',wobbleEnabled:'wobbleEnabled',blinkEnabled:'blinkEnabled',breatheEnabled:'breatheEnabled',followCursor:'followCursor',accessoryVisible:'accessoryVisible',accessoryLocked:'accessoryLocked'};const field=keyMap[key]||key;let next=!config[field];if(key==='accessoryVisible'||key==='accessoryLocked'){const a=getSelectedAccessory();if(!a)return;const prop=key==='accessoryVisible'?'visible':'locked';const list=config.accessories.map(x=>x.id===a.id?{...x,[prop]:!x[prop]}:x);remember();config={...config,accessories:list};persist();renderAvatar();renderPanel();return;}remember();config={...config,[field]:next};persist();renderAvatar();renderPanel();return;}
+    const animation=e.target.closest('[data-animation]');if(animation){playAnimation(animation.dataset.animation);return;}
+    const layerMove=e.target.closest('[data-layer-move]');if(layerMove){moveLayer(layerMove.dataset.layer,layerMove.dataset.layerMove);return;}
+    const layerToggle=e.target.closest('[data-layer-toggle]');if(layerToggle){const layer=layerToggle.dataset.layer;remember();config.layerVisibility={...config.layerVisibility,[layer]:config.layerVisibility?.[layer]===false?true:false};persist();renderAvatar();renderPanel();return;}
+    const accDelete=e.target.closest('[data-acc-delete]');if(accDelete){remember();config.accessories=config.accessories.filter(a=>a.id!==accDelete.dataset.accDelete);if(config.selectedAccessoryId===accDelete.dataset.accDelete)config.selectedAccessoryId=config.accessories[0]?.id||null;persist();renderAvatar();renderPanel();showToast('Accessory removed');return;}
+    const accMove=e.target.closest('[data-acc-move]');if(accMove){moveAccessory(accMove.dataset.id,accMove.dataset.accMove);return;}
+    const accSelect=e.target.closest('[data-select-accessory]');if(accSelect){config.selectedAccessoryId=accSelect.dataset.selectAccessory;renderPanel();return;}
+    const action=e.target.closest('[data-action]');if(action){const act=action.dataset.action;
+      if(act==='add-accessory'){const type=$('#accessoryPicker')?.value||'sparkle';remember();const a=makeAccessory(type,config.accent);config.accessories=[...(config.accessories||[]),a];config.selectedAccessoryId=a.id;persist();renderAvatar();renderPanel();showToast('Accessory added');}
+      else if(act==='fit-hat'){remember();config.hatScale=1;config.hatX=0;config.hatY=0;config.hatTilt=0;persist();renderAvatar();renderPanel();}
+      else if(act==='new-dot'){closeModal();createNewDot();}
+      else if(act==='duplicate-dot'){closeModal();duplicateDot();}
+      else if(act==='delete-dot'){closeModal();if(confirm(`Delete ${config.name}? This only removes its local design.`))deleteDot();}
+      else if(act==='copy-share'){await copyText(makeShareUrl());showToast('Share link copied');}
+      else if(act==='export-png'){showExportPngChoices();}
+      else if(act==='export-svg'){downloadSVG();closeModal();}
+      else if(act==='export-json'){downloadJSON();closeModal();}
+      else if(act==='copy-json'){await copyText(JSON.stringify(config,null,2));showToast('Dot JSON copied');}
+      else if(act==='copy-prompt'){await copyText(copyImagePrompt());showToast('Image prompt copied');}
+      else if(act==='copy-react'){await copyReact();closeModal();}
+      else if(act==='export-stickers'){closeModal();await downloadStickerPack();}
+      else if(act==='export-webm'){closeModal();await downloadWebM();}
+      else if(act==='reduce-motion'){document.body.classList.toggle('reduce-motion');showToast(document.body.classList.contains('reduce-motion')?'Reduced motion enabled':'Motion enabled');renderPanel();}
+    }
+    const size=e.target.closest('[data-size]');if(size){$$('.size-chip').forEach(b=>b.classList.toggle('active',b===size));config.selectedSize=Number(size.dataset.size);persist();showToast(`${size.dataset.size}px preview selected`);return;}
+    const png=e.target.closest('[data-png-size]');if(png){const n=Number(png.dataset.pngSize);closeModal();await downloadPNG(n,config);return;}
+    if(e.target.closest('#newDotBtn')){createNewDot();return;}
+    if(e.target.closest('#moreBtn')){openModal(`<h2 class="modal-title" id="modalTitle">${escapeHtml(config.name)} options</h2><p class="modal-subtitle">Manage this character or inspect its full design spec.</p><div class="export-options"><button class="export-card" data-action="duplicate-dot"><span>＋</span><strong>Duplicate Dot</strong><small>Make a separate editable copy</small></button><button class="export-card" data-action="delete-dot"><span>×</span><strong>Delete Dot</strong><small>Remove it from this device</small></button><button class="export-card" data-action="copy-json"><span>{ }</span><strong>Copy design JSON</strong><small>Keep a portable backup</small></button><button class="export-card" data-action="copy-prompt"><span>✦</span><strong>Copy image prompt</strong><small>Use this look in an image model</small></button></div>`);return;}
+    if(e.target.closest('#undoBtn')){undo();return;}if(e.target.closest('#redoBtn')){redo();return;}if(e.target.closest('#shareBtn')){openShare();return;}if(e.target.closest('#exportBtn')){openExport();return;}if(e.target.closest('#saveBtn')){saveDot();return;}if(e.target.closest('#resetBtn')){if(confirm('Reset this Dot to a fresh starter design?')){remember();const fresh=newConfig('Pip','cloud',PALETTES[2]);fresh.id=config.id;config=fresh;persist();renderAll();showToast('Dot reset');}return;}if(e.target.closest('#surpriseBtn')){randomize('all');return;}if(e.target.closest('#themeToggle')){document.body.classList.toggle('light-theme');const theme=document.body.classList.contains('light-theme')?'light':'dark';localStorage.setItem(PREF_KEY,JSON.stringify({theme}));$('#themeToggle span:nth-child(2)').textContent=theme==='light'?'Switch to dark mode':'Switch to light mode';showToast(`${theme==='light'?'Light':'Dark'} theme`);return;}if(e.target.closest('#specBtn')||e.target.closest('#specBottomBtn')){openSpec();return;}if(e.target.closest('#modalClose')){closeModal();return;}if(e.target=== $('#modalBackdrop')){closeModal();return;}if(e.target.closest('#bgToggleBtn')){config.stageMode=config.stageMode==='spotlight'?'grid':config.stageMode==='grid'?'plain':'spotlight';persist();renderAvatar();return;}if(e.target.closest('#zoomInBtn')){currentZoom=clamp(currentZoom+.08,.72,1.3);renderAvatar();$('#zoomLabel').textContent=`${Math.round(currentZoom*100)}%`;return;}if(e.target.closest('#zoomOutBtn')){currentZoom=clamp(currentZoom-.08,.72,1.3);renderAvatar();$('#zoomLabel').textContent=`${Math.round(currentZoom*100)}%`;return;}if(e.target.closest('#playAllBtn')){togglePlayAll();return;}if(e.target.closest('#contextToggle')){const el=$('#contextPreviews');const hidden=el.style.display==='none';el.style.display=hidden?'grid':'none';$('#contextToggle').textContent=hidden?'Hide previews ↑':'Show previews ↓';return;}
+    const nav=e.target.closest('[data-nav],[data-mobile-nav]');if(nav){const target=nav.dataset.nav||nav.dataset.mobileNav;if(target==='starters')openGallery();else if(target==='collection')openCollection();else{closeModal();}return;}
+  });
+
+  document.addEventListener('input',(e)=>{
+    const input=e.target.closest('[data-bind]');if(input){let key=input.dataset.bind;let val=input.type==='checkbox'?input.checked:(input.type==='range'?Number(input.value):input.type==='color'?input.value:input.value);if(key==='expression')return;
+      if(key==='name'){config.name=String(val).slice(0,28);config.handle=`@${slug(config.name)}-buddy`;$('#nameInput').value=config.name;}
+      else if(key==='handle')config.handle=String(val).slice(0,48);
+      else if(key==='accessoryColor'||key==='accessoryScale'||key==='accessoryX'||key==='accessoryY'||key==='accessoryRotation'||key==='accessoryOpacity'){const a=getSelectedAccessory();if(a){const map={accessoryColor:'color',accessoryScale:'scale',accessoryX:'x',accessoryY:'y',accessoryRotation:'rotation',accessoryOpacity:'opacity'};config.accessories=config.accessories.map(x=>x.id===a.id?{...x,[map[key]]:val}:x);}}
+      else config[key]=val;
+      config.updatedAt=Date.now();persist();renderAvatar();updateIdentity();updateContext();updateSliderOutputs();return;
+    }
+    if(e.target.id==='shapeSearch'){shapeSearch=e.target.value;const position=e.target.selectionStart;renderPanel();const s=$('#shapeSearch');s.focus();s.setSelectionRange(position,position);}
+  });
+  document.addEventListener('change',(e)=>{const input=e.target.closest('[data-bind]');if(input){persist();if(['shapeSearch'].includes(input.id))return;if(input.dataset.bind==='expression')applyExpression(input.value);else{renderAvatar();updateIdentity();updateContext();renderPanel();}}});
+  let editSnapshot=null;
+  document.addEventListener('focusin',(e)=>{if(e.target.matches('[data-bind]')&&!editSnapshot)editSnapshot=clone(config);});
+  document.addEventListener('focusout',(e)=>{if(e.target.matches('[data-bind]')&&editSnapshot){if(JSON.stringify(editSnapshot)!==JSON.stringify(config)){history.push(editSnapshot);if(history.length>60)history.shift();redoStack=[];updateUndoButtons();}editSnapshot=null;}});
+  document.addEventListener('pointerdown',(e)=>{if(e.target.matches('[data-bind][type="range"],[data-bind][type="color"]'))editSnapshot=clone(config);});
+  document.addEventListener('keydown',(e)=>{
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();if(e.shiftKey)redo();else undo();}
+    if(e.key==='Escape')closeModal();
+  });
+  $('#nameInput').addEventListener('input',(e)=>{const snap=clone(config);config.name=e.target.value.slice(0,28);config.handle=`@${slug(config.name)}-buddy`;persist();renderAvatar();updateIdentity();if(!$('#nameInput').matches(':focus'))$('#nameInput').value=config.name;});
+  $('#nameInput').addEventListener('focus',()=>{editSnapshot=clone(config);});
+  $('#nameInput').addEventListener('blur',()=>{if(editSnapshot&&JSON.stringify(editSnapshot)!==JSON.stringify(config)){history.push(editSnapshot);redoStack=[];updateUndoButtons();}editSnapshot=null;});
+  $('#modalClose').addEventListener('click',closeModal);
+  $('#stageBackdrop').addEventListener('pointermove',(e)=>{
+    if(!config.followCursor)return;const rect=e.currentTarget.getBoundingClientRect();const x=clamp((e.clientX-rect.left)/rect.width-.5,-.5,.5)*5;const y=clamp((e.clientY-rect.top)/rect.height-.5,-.5,.5)*4;$$('#avatarSlot .pupil').forEach(el=>{el.setAttribute('transform',`translate(${x} ${y})`);});
+  });
+  $('#stageBackdrop').addEventListener('pointerleave',()=>$$('#avatarSlot .pupil').forEach(el=>el.removeAttribute('transform')));
+  let dragSnapshot=null;
+  $('#stageBackdrop').addEventListener('pointerdown',(e)=>{
+    if(!config||!e.target.closest('#avatarSlot'))return;
+    dragSnapshot=clone(config);
+    const slot=$('#avatarSlot');slot.classList.add('dragging');
+    const startX=e.clientX,startY=e.clientY,ox=Number(config.stageOffsetX)||0,oy=Number(config.stageOffsetY)||0;
+    const move=(ev)=>{
+      const dx=clamp(Math.round(ox+(ev.clientX-startX)),-90,90);
+      const dy=clamp(Math.round(oy+(ev.clientY-startY)),-70,70);
+      config={...config,stageOffsetX:dx,stageOffsetY:dy};
+      slot.style.setProperty('--avatar-dx',`${dx}px`);
+      slot.style.setProperty('--avatar-dy',`${dy}px`);
+    };
+    const up=()=>{
+      document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);
+      slot.classList.remove('dragging');
+      if((Number(config.stageOffsetX)||0)!==ox||(Number(config.stageOffsetY)||0)!==oy){
+        config.updatedAt=Date.now();history.push(dragSnapshot);if(history.length>60)history.shift();redoStack=[];updateUndoButtons();persist();
+      }
+    };
+    document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);
+    e.preventDefault();
+  });
+
+  function playAnimation(name){
+    const rig=$('#avatarSlot .rig');if(!rig)return;
+    const anims={blink:'animation:blink .3s ease-in-out 2',bounce:'animation:doneHop .8s cubic-bezier(.34,1.45,.5,1) 1',squish:'animation:squishPulse .7s cubic-bezier(.45,0,.55,1) 1',jiggle:'animation:jiggleWiggle .55s ease-in-out 2',pop:'animation:doneHop .55s cubic-bezier(.2,.8,.2,1) 1'};
+    if(name==='orbit'){const ring=$('#avatarSlot .orbit-group');if(ring){ring.style.animation='orbitSpin 3.4s cubic-bezier(.2,.6,.35,1) 1';setTimeout(()=>{if(ring.isConnected)ring.style.animation='';},3500);}else{const prev=config.state;config={...config,state:'orbit'};renderAvatar(true);setTimeout(()=>{config={...config,state:prev};renderAvatar(true);},2400);}return;}
+    rig.style.cssText+=`;${anims[name]||anims.bounce}`;setTimeout(()=>{if(rig.isConnected)rig.style.cssText='';},1700);
+  }
+  function togglePlayAll(){
+    if(playingAll){clearInterval(playTimer);playingAll=false;$('#playAllBtn').innerHTML='<span>▶</span> Play all';return;}
+    playingAll=true;let i=0;$('#playAllBtn').innerHTML='<span>Ⅱ</span> Pause';setState(STATES[i][0]);playTimer=setInterval(()=>{i=(i+1)%STATES.length;config={...config,state:STATES[i][0]};persist();renderAvatar(true);updateMoodButtons();},1500);
+  }
+
+  function initialize(){
+    loadStore();
+    const prefs=JSON.parse(localStorage.getItem(PREF_KEY)||'{}');if(prefs.theme==='light'){$('#themeToggle span:nth-child(2)').textContent='Switch to dark mode';}
+    renderAll();
+    updateUndoButtons();
+  }
+  initialize();
+})();

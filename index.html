@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#11121a" />
+  <meta name="description" content="Create, customize, and export your own playful companion avatar." />
+  <title>DotStudio — Make a little companion</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation">
+      <a class="brand" href="#" aria-label="DotStudio home">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 4c8.7 0 15.5 6.9 15.5 15.7 0 8.1-6.5 15.3-15.5 15.3S4.5 28 4.5 19.7C4.5 10.9 11.3 4 20 4Z" fill="url(#brandGrad)"/><ellipse cx="15.2" cy="18" rx="1.8" ry="2.7" fill="#181426"/><ellipse cx="24.8" cy="18" rx="1.8" ry="2.7" fill="#181426"/><path d="M16.8 24c1.1 1.2 2.2 1.8 3.2 1.8s2.1-.6 3.2-1.8" fill="none" stroke="#181426" stroke-width="1.7" stroke-linecap="round"/><defs><linearGradient id="brandGrad" x1="5" y1="5" x2="34" y2="35"><stop stop-color="#d8c6ff"/><stop offset="1" stop-color="#8b78ed"/></linearGradient></defs></svg></span>
+        <span class="brand-copy"><strong>dotstudio</strong><small>companion creator</small></span>
+      </a>
+
+      <div class="nav-group">
+        <span class="nav-label">WORKSPACE</span>
+        <button class="nav-item active" data-nav="studio"><span class="nav-icon">✳</span><span>Studio</span><kbd>1</kbd></button>
+        <button class="nav-item" data-nav="starters"><span class="nav-icon">◇</span><span>Starter gallery</span></button>
+        <button class="nav-item" data-nav="collection"><span class="nav-icon">▦</span><span>My Dots</span><span class="nav-count" id="dotCount">1</span></button>
+      </div>
+
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-list-head"><span class="nav-label">YOUR CHARACTERS</span><button id="newDotBtn" class="icon-button add-small" aria-label="Create a new Dot" title="Create a new Dot">＋</button></div>
+      <div class="dot-list" id="dotList"></div>
+
+      <div class="sidebar-spacer"></div>
+      <div class="local-save"><span class="save-indicator"></span><div><strong>Saved on this device</strong><small>Your creations stay private</small></div></div>
+      <button id="themeToggle" class="theme-toggle"><span class="theme-icon">☼</span><span>Switch to light mode</span><span class="theme-switch"><i></i></span></button>
+      <div class="sidebar-footer">Independent avatar creator<br /><span>Not affiliated with OpenAI</span></div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="breadcrumb"><span>Studio</span><span class="crumb-sep">/</span><strong id="breadcrumbName">Pip</strong></div>
+        <div class="topbar-actions">
+          <label class="name-field"><span class="name-spark">✦</span><input id="nameInput" aria-label="Dot name" maxlength="28" value="Pip"/><span class="name-caret">⌄</span></label>
+          <div class="top-divider"></div>
+          <button id="undoBtn" class="toolbar-button" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo">↶</button>
+          <button id="redoBtn" class="toolbar-button" title="Redo (Shift+Ctrl/Cmd+Z)" aria-label="Redo">↷</button>
+          <button id="shareBtn" class="secondary-button"><span>↗</span> Share</button>
+          <button id="exportBtn" class="primary-button"><span>⇩</span> Export</button>
+          <button id="moreBtn" class="toolbar-button more-button" title="More options" aria-label="More options">···</button>
+        </div>
+      </header>
+
+      <div class="workspace-intro">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-dot"></span> YOUR LITTLE COMPANION, YOUR RULES</p>
+          <h1>Make a little <em>personality.</em></h1>
+          <p class="intro-copy">Shape a soft, colorful Dot. Give it a face, a favorite hat, and a mood all its own.</p>
+        </div>
+        <div class="intro-actions">
+          <button id="surpriseBtn" class="soft-button"><span>✧</span> Surprise me</button>
+          <button id="resetBtn" class="quiet-button">Reset</button>
+        </div>
+      </div>
+
+      <div class="editor-layout">
+        <section class="stage-column" aria-label="Live avatar preview">
+          <div class="stage-card" id="stageCard">
+            <div class="stage-topline">
+              <div class="live-label"><span class="live-pulse"></span> LIVE PREVIEW <span class="tiny-divider">/</span> <span id="stateLabel">IDLE</span></div>
+              <div class="stage-tools">
+                <button id="bgToggleBtn" class="stage-tool" title="Toggle stage background">◐ <span>Stage</span></button>
+                <button id="zoomOutBtn" class="stage-tool" title="Zoom out">−</button><span class="zoom-level" id="zoomLabel">100%</span><button id="zoomInBtn" class="stage-tool" title="Zoom in">＋</button>
+              </div>
+            </div>
+            <div class="stage-backdrop" id="stageBackdrop">
+              <div class="stage-orb glow-a"></div><div class="stage-orb glow-b"></div>
+              <div class="stage-star star-one">✦</div><div class="stage-star star-two">✧</div><div class="stage-star star-three">·</div>
+              <div class="avatar-slot" id="avatarSlot"></div>
+              <div class="stage-floor"></div>
+              <div class="stage-nameplate"><span class="nameplate-dot"></span><span id="stageName">Pip</span><span class="nameplate-handle" id="stageHandle">@pip-buddy</span></div>
+            </div>
+            <div class="stage-bottomline">
+              <div class="stage-caption"><span class="stage-caption-icon">✧</span><span id="stageDescription">A curious little cloud with a soft glow.</span></div>
+              <div class="stage-size-control"><button class="size-chip active" data-size="128">128</button><button class="size-chip" data-size="256">256</button><button class="size-chip" data-size="512">512</button></div>
+            </div>
+          </div>
+
+          <div class="mood-panel">
+            <div class="mood-heading"><div><h2>Bring it to life</h2><p>Preview different expressions and states</p></div><button id="playAllBtn" class="play-all-button"><span>▶</span> Play all</button></div>
+            <div class="mood-grid" id="moodGrid"></div>
+          </div>
+
+          <div class="context-row">
+            <div class="context-heading"><div><strong>Icon check</strong><span>See how Pip feels everywhere</span></div><button class="text-button" id="contextToggle">Hide previews ↑</button></div>
+            <div class="context-previews" id="contextPreviews">
+              <div class="context-card"><div class="mock-chat"><div class="mock-avatar" id="mockChatAvatar"></div><div><b id="mockChatName">Pip</b><small>Always around</small></div><span class="online-dot"></span></div><span class="context-caption">CHAT HEADER</span></div>
+              <div class="context-card"><div class="mock-profile"><div class="mock-avatar circle" id="mockProfileAvatar"></div></div><span class="context-caption">PROFILE ICON</span></div>
+              <div class="context-card"><div class="mock-notice"><div class="mock-avatar tiny" id="mockNoticeAvatar"></div><div><b>DotStudio</b><small id="mockNoticeName">Pip is here to help.</small></div></div><span class="context-caption">NOTIFICATION</span></div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="inspector" aria-label="Avatar customization controls">
+          <div class="inspector-header"><div><span class="inspector-kicker">DESIGN YOUR DOT</span><h2>Customize</h2></div><button class="icon-button inspector-more" id="specBtn" title="View Dot specification">⌘</button></div>
+          <div class="tab-strip" id="tabStrip" role="tablist" aria-label="Customization sections">
+            <button class="editor-tab active" data-tab="shape" role="tab">Shape</button>
+            <button class="editor-tab" data-tab="face" role="tab">Face</button>
+            <button class="editor-tab" data-tab="style" role="tab">Style</button>
+            <button class="editor-tab" data-tab="hats" role="tab">Hats</button>
+            <button class="editor-tab" data-tab="extras" role="tab">Extras</button>
+            <button class="editor-tab" data-tab="motion" role="tab">Motion</button>
+          </div>
+          <div class="panel-scroll" id="panelContent"></div>
+          <div class="inspector-bottom"><button id="saveBtn" class="save-button"><span>✓</span> Save Dot</button><button id="specBottomBtn" class="spec-button">View Dot spec <span>↗</span></button></div>
+        </aside>
+      </div>
+      <footer class="main-footer"><span>Made for little personalities</span><span>DotStudio <i>·</i> Independent fan-made avatar creator</span></footer>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Mobile navigation"><button class="active" data-mobile-nav="studio"><span>✳</span>Studio</button><button data-mobile-nav="starters"><span>◇</span>Starters</button><button data-mobile-nav="collection"><span>▦</span>My Dots</button></nav>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true"><section class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="modal-close" id="modalClose" aria-label="Close">×</button><div id="modalContent"></div></section></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
